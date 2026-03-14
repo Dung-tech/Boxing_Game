@@ -1,0 +1,26 @@
+# === Python ===
+python_controller/venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# === Java / Gradle (Dành cho ae làm Game) ===
+.gradle/
+build/
+bin/
+out/
+.metadata/
+.project
+.classpath
+.settings/
+
+# === VS Code & IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Hệ thống ===
+.DS_Store
+Thumbs.db
