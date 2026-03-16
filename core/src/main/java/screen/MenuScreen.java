@@ -1,4 +1,6 @@
 package screen;
 
-public class MenuScreen {
+import com.badlogic.gdx.ScreenAdapter;
+
+public class MenuScreen extends ScreenAdapter {
 }

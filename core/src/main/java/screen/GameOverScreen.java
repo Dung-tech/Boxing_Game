@@ -1,4 +1,6 @@
 package screen;
 
-public class GameOverScreen {
+import com.badlogic.gdx.ScreenAdapter;
+
+public class GameOverScreen extends ScreenAdapter {
 }

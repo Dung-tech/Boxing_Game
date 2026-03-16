@@ -1,4 +1,6 @@
 package input;
 
-public class KeyboardInput {
+import input.InputController;
+
+public class KeyboardInput  {
 }
