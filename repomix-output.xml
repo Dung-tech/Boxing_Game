@@ -1,0 +1,1720 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.editorconfig
+.gitattributes
+.gitignore
+assets/images/background/background.jpg
+assets/images/p1/idle.png
+assets/images/p2/idle.png
+assets/libgdx.png
+build.gradle
+core/build.gradle
+core/src/main/java/com/boxinggame/main/Main.java
+core/src/main/java/controller/FighterController.java
+core/src/main/java/controller/P1Controller.java
+core/src/main/java/controller/P2Controller.java
+core/src/main/java/effect/EffectManager.java
+core/src/main/java/entity/Fighter.java
+core/src/main/java/entity/HitBox.java
+core/src/main/java/input/CameraInput.java
+core/src/main/java/input/InputController.java
+core/src/main/java/input/KeyboardInput.java
+core/src/main/java/screen/GameOverScreen.java
+core/src/main/java/screen/GameScreen.java
+core/src/main/java/screen/MenuScreen.java
+core/src/main/java/sound/SoundManager.java
+core/src/main/java/system/CollisionSystem.java
+core/src/main/java/system/CombatSystem.java
+core/src/main/java/system/GameStateManager.java
+core/src/main/java/system/RenderSystem.java
+core/src/main/java/system/RoundSystem.java
+core/src/main/java/test/CombatTest.java
+core/src/main/java/test/InputTest.java
+core/src/main/java/ui/AnimationManager.java
+core/src/main/java/ui/GameHUD.java
+core/src/main/java/ui/HealthBar.java
+core/src/main/java/ui/ManaBar.java
+core/src/main/java/util/AssetManagerWrapper.java
+core/src/main/java/util/Config.java
+core/src/main/java/util/Constants.java
+gradle.properties
+gradle/gradle-daemon-jvm.properties
+gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
+gradlew
+gradlew.bat
+lwjgl3/build.gradle
+lwjgl3/icons/logo.icns
+lwjgl3/icons/logo.ico
+lwjgl3/icons/logo.png
+lwjgl3/nativeimage.gradle
+lwjgl3/src/main/java/com/boxinggame/lwjgl3/Lwjgl3Launcher.java
+lwjgl3/src/main/java/com/boxinggame/lwjgl3/StartupHelper.java
+lwjgl3/src/main/resources/libgdx128.png
+lwjgl3/src/main/resources/libgdx16.png
+lwjgl3/src/main/resources/libgdx32.png
+lwjgl3/src/main/resources/libgdx64.png
+README.md
+settings.gradle
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".editorconfig">
+# https://editorconfig.org
+root = true
+
+[*]
+indent_style = space
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{java,scala,groovy,kt,kts}]
+indent_size = 4
+
+[*.gradle]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+</file>
+
+<file path=".gitattributes">
+* text=auto eol=lf
+*.bat text=auto eol=crlf
+</file>
+
+<file path=".gitignore">
+## Gradle:
+.gradle/
+gradle-app.setting
+/build/
+/android/build/
+/core/build/
+/lwjgl2/build/
+/lwjgl3/build/
+/html/build/
+/teavm/build/
+/ios/build/
+/ios-moe/build/
+/headless/build/
+/server/build/
+/shared/build/
+
+## Java:
+*.class
+*.war
+*.ear
+hs_err_pid*
+.attach_pid*
+
+## Android:
+/android/libs/armeabi-v7a/
+/android/libs/arm64-v8a/
+/android/libs/x86/
+/android/libs/x86_64/
+/android/gen/
+/android/out/
+local.properties
+com_crashlytics_export_strings.xml
+
+## Robovm:
+/ios/robovm-build/
+
+## iOS:
+/ios/xcode/*.xcodeproj/*
+!/ios/xcode/*.xcodeproj/xcshareddata
+!/ios/xcode/*.xcodeproj/project.pbxproj
+/ios/xcode/native/
+/ios/IOSLauncher.app
+/ios/IOSLauncher.app.dSYM
+
+## GWT:
+/html/war/
+/html/gwt-unitCache/
+.apt_generated/
+/html/war/WEB-INF/deploy/
+/html/war/WEB-INF/classes/
+.gwt/
+gwt-unitCache/
+www-test/
+.gwt-tmp/
+
+## TeaVM:
+# Not sure yet...
+
+## IntelliJ, Android Studio:
+.idea/
+*.ipr
+*.iws
+*.iml
+
+## Eclipse:
+.classpath
+.project
+.metadata/
+/android/bin/
+/core/bin/
+/lwjgl2/bin/
+/lwjgl3/bin/
+/html/bin/
+/teavm/bin/
+/ios/bin/
+/ios-moe/bin/
+/headless/bin/
+/server/bin/
+/shared/bin/
+*.tmp
+*.bak
+*.swp
+*~.nib
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+
+
+## NetBeans:
+
+/nbproject/private/
+/android/nbproject/private/
+/core/nbproject/private/
+/lwjgl2/nbproject/private/
+/lwjgl3/nbproject/private/
+/html/nbproject/private/
+/teavm/nbproject/private/
+/ios/nbproject/private/
+/ios-moe/nbproject/private/
+/headless/nbproject/private/
+/server/nbproject/private/
+/shared/nbproject/private/
+
+/nbbuild/
+/android/nbbuild/
+/core/nbbuild/
+/lwjgl2/nbbuild/
+/lwjgl3/nbbuild/
+/html/nbbuild/
+/teavm/nbbuild/
+/ios/nbbuild/
+/ios-moe/nbbuild/
+/headless/nbbuild/
+/server/nbbuild/
+/shared/nbbuild/
+
+/dist/
+/android/dist/
+/core/dist/
+/lwjgl2/dist/
+/lwjgl3/dist/
+/html/dist/
+/teavm/dist/
+/ios/dist/
+/ios-moe/dist/
+/headless/dist/
+/server/dist/
+/shared/dist/
+
+/nbdist/
+/android/nbdist/
+/core/nbdist/
+/lwjgl2/nbdist/
+/lwjgl3/nbdist/
+/html/nbdist/
+/teavm/nbdist/
+/ios/nbdist/
+/ios-moe/nbdist/
+/headless/nbdist/
+/server/nbdist/
+/shared/nbdist/
+
+nbactions.xml
+nb-configuration.xml
+
+## OS-Specific:
+.DS_Store
+Thumbs.db
+
+## Miscellaneous:
+*~
+*.*#
+*#*#
+/.kotlin/
+/assets/assets.txt
+
+## Special cases:
+
+## There is a resource-config.json file generated by nativeimage.gradle if you use Graal Native Image.
+## Some usage may need extra resource configuration in a different file with the same name.
+## You could also add that configuration to the text in nativeimage.gradle .
+## You should delete or comment out the next line if you have configuration in a different resource-config.json .
+**/resource-config.json
+</file>
+
+<file path="build.gradle">
+buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+    mavenLocal()
+    google()
+    maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+  }
+  dependencies {
+
+
+  }
+}
+
+allprojects {
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+
+  // This allows you to "Build and run using IntelliJ IDEA", an option in IDEA's Settings.
+  idea {
+    module {
+      outputDir = file('build/classes/java/main')
+      testOutputDir = file('build/classes/java/test')
+    }
+  }
+}
+
+configure(subprojects) {
+  apply plugin: 'java-library'
+  java.sourceCompatibility = 17
+
+  // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
+  // The article can be helpful when using assets.txt in your project.
+  tasks.register('generateAssetList') {
+    inputs.dir("${project.rootDir}/assets/")
+    // projectFolder/assets
+    File assetsFolder = new File("${project.rootDir}/assets/")
+    // projectFolder/assets/assets.txt
+    File assetsFile = new File(assetsFolder, "assets.txt")
+    // delete that file in case we've already created it
+    assetsFile.delete()
+
+    // iterate through all files inside that folder
+    // convert it to a relative path
+    // and append it to the file assets.txt
+    fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+      assetsFile.append(it + "\n")
+    }
+  }
+  processResources.dependsOn 'generateAssetList'
+
+  compileJava {
+    options.incremental = true
+  }
+}
+
+subprojects {
+  version = "$projectVersion"
+  ext.appName = 'BoxingGame'
+  repositories {
+    mavenCentral()
+    // You may want to remove the following line if you have errors downloading dependencies.
+    mavenLocal()
+    maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+    maven { url = 'https://jitpack.io' }
+  }
+}
+
+eclipse.project.name = 'BoxingGame' + '-parent'
+</file>
+
+<file path="core/build.gradle">
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
+
+dependencies {
+  api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
+  }
+}
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+</file>
+
+<file path="core/src/main/java/com/boxinggame/main/Main.java">
+package com.boxinggame.main;
+
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.utils.ScreenUtils;
+
+/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+public class Main extends ApplicationAdapter {
+    private SpriteBatch batch;
+    private Texture image;
+
+    @Override
+    public void create() {
+        batch = new SpriteBatch();
+        image = new Texture("libgdx.png");
+    }
+
+    @Override
+    public void render() {
+        ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
+        batch.begin();
+        batch.draw(image, 140, 210);
+        batch.end();
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
+        image.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/controller/FighterController.java">
+package controller;
+
+public abstract class FighterController {
+
+}
+</file>
+
+<file path="core/src/main/java/controller/P1Controller.java">
+package controller;
+
+
+public class P1Controller extends FighterController {
+
+}
+</file>
+
+<file path="core/src/main/java/controller/P2Controller.java">
+package controller;
+
+public class P2Controller extends FighterController {
+
+}
+</file>
+
+<file path="core/src/main/java/effect/EffectManager.java">
+package effect;
+
+public class EffectManager {
+}
+</file>
+
+<file path="core/src/main/java/entity/Fighter.java">
+package entity;
+
+import util.Constants;
+import util.Constants.Action;
+import util.Constants.Side;
+
+public class Fighter {
+    private Side side;
+    private Action currentState;
+    private float hp, mana;
+
+    public Fighter(Side side) {
+        this.side = side;
+        this.hp = Constants.MAX_HP; // 20 máu
+        this.mana = 0;
+        this.currentState = Action.IDLE;
+    }
+
+    public void update(float delta) {
+        // Tạm thời để trống cho Dev 2 làm logic đếm ngược thời gian đấm
+    }
+
+    public void performAction(Action action) {
+        this.currentState = action;
+        System.out.println(side + " thực hiện: " + action);
+    }
+
+    public void takeDamage(float damage) {
+        this.hp -= damage;
+        if (this.hp < 0) this.hp = 0;
+    }
+
+    // Getters để vẽ UI và tính va chạm
+    public float getHp() { return hp; }
+    public Action getCurrentState() { return currentState; }
+}
+</file>
+
+<file path="core/src/main/java/entity/HitBox.java">
+package entity;
+
+public class HitBox {
+}
+</file>
+
+<file path="core/src/main/java/input/CameraInput.java">
+package input;
+
+public class CameraInput {
+}
+</file>
+
+<file path="core/src/main/java/sound/SoundManager.java">
+package sound;
+
+public class SoundManager {
+}
+</file>
+
+<file path="core/src/main/java/system/CollisionSystem.java">
+package system;
+
+public class CollisionSystem {
+}
+</file>
+
+<file path="core/src/main/java/system/CombatSystem.java">
+package system;
+
+public class CombatSystem {
+}
+</file>
+
+<file path="core/src/main/java/system/GameStateManager.java">
+package system;
+
+public class GameStateManager {
+}
+</file>
+
+<file path="core/src/main/java/system/RenderSystem.java">
+package system;
+
+public class RenderSystem {
+}
+</file>
+
+<file path="core/src/main/java/system/RoundSystem.java">
+package system;
+
+public class RoundSystem {
+}
+</file>
+
+<file path="core/src/main/java/test/CombatTest.java">
+package test;
+
+public class CombatTest {
+}
+</file>
+
+<file path="core/src/main/java/test/InputTest.java">
+package test;
+
+public class InputTest {
+}
+</file>
+
+<file path="core/src/main/java/ui/AnimationManager.java">
+package ui;
+
+public class AnimationManager {
+}
+</file>
+
+<file path="core/src/main/java/ui/GameHUD.java">
+package ui;
+
+public class GameHUD {
+}
+</file>
+
+<file path="core/src/main/java/ui/HealthBar.java">
+package ui;
+
+public class HealthBar {
+}
+</file>
+
+<file path="core/src/main/java/ui/ManaBar.java">
+package ui;
+
+public class ManaBar {
+}
+</file>
+
+<file path="core/src/main/java/util/AssetManagerWrapper.java">
+package util;
+
+import com.badlogic.gdx.assets.AssetManager;
+
+public class AssetManagerWrapper {
+    private static AssetManager manager = new AssetManager();
+
+    public static void loadAll() {
+        // Dev 5 và Dev 4 sẽ vào đây thêm đường dẫn file khi có hàng xịn
+        // manager.load(Constants.SFX_PUNCH, Sound.class);
+        // manager.load(Constants.TEXTURE_ATLAS, TextureAtlas.class);
+    }
+
+    public static <T> T get(String fileName, Class<T> type) {
+        return manager.get(fileName, type);
+    }
+
+    public static void dispose() {
+        manager.dispose();
+    }
+
+    public static boolean update() { return manager.update(); }
+}
+</file>
+
+<file path="core/src/main/java/util/Config.java">
+package util;
+
+public class Config {
+}
+</file>
+
+<file path="gradle.properties">
+# This doesn't need to be false, and some projects may be able to take advantage of setting daemon to true.
+# We set it to false by default in order to avoid too many daemons from being created and persisting; each needs RAM.
+org.gradle.daemon=false
+# Sets starting memory usage to 512MB, maximum memory usage to 1GB, and tries to set as much to use Unicode as we can.
+org.gradle.jvmargs=-Xms512M -Xmx1G -Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8
+# "Configure on-demand" must be false because it breaks projects that have Android modules. The default is also false.
+org.gradle.configureondemand=false
+# The logging level determines which messages get shown about how Gradle itself is working, such as if build.gradle
+# files are fully future-proof (which they never are, because Gradle constantly deprecates working APIs).
+# You can change 'quiet' below to 'lifecycle' to use Gradle's default behavior, which shows some confusing messages.
+# You could instead change 'quiet' below to 'info' to see info that's important mainly while debugging build files.
+# Note that if you want to use Gradle Build Scans, you should set the below logging level to 'lifecycle', otherwise
+# the link to the scan won't get shown at all.
+# Documented at: https://docs.gradle.org/current/userguide/command_line_interface.html#sec:command_line_logging
+org.gradle.logging.level=quiet
+graalHelperVersion=2.0.1
+enableGraalNative=false
+gdxVersion=1.14.0
+projectVersion=1.0.0
+</file>
+
+<file path="gradle/gradle-daemon-jvm.properties">
+#This file is generated by updateDaemonJvm
+toolchainUrl.FREE_BSD.AARCH64=https\://api.foojay.io/disco/v3.0/ids/df211d3c3eefdc408b462041881bc575/redirect
+toolchainUrl.FREE_BSD.X86_64=https\://api.foojay.io/disco/v3.0/ids/93aeea858331bd6bb00ba94759830234/redirect
+toolchainUrl.LINUX.AARCH64=https\://api.foojay.io/disco/v3.0/ids/df211d3c3eefdc408b462041881bc575/redirect
+toolchainUrl.LINUX.X86_64=https\://api.foojay.io/disco/v3.0/ids/b41931cf1e70bc8e08d7dd19c343ef00/redirect
+toolchainUrl.MAC_OS.AARCH64=https\://api.foojay.io/disco/v3.0/ids/3426ffcaa54c3f62406beb1f1ab8b179/redirect
+toolchainUrl.MAC_OS.X86_64=https\://api.foojay.io/disco/v3.0/ids/d6690dfd71c4c91e08577437b5b2beb0/redirect
+toolchainUrl.UNIX.AARCH64=https\://api.foojay.io/disco/v3.0/ids/df211d3c3eefdc408b462041881bc575/redirect
+toolchainUrl.UNIX.X86_64=https\://api.foojay.io/disco/v3.0/ids/b41931cf1e70bc8e08d7dd19c343ef00/redirect
+toolchainUrl.WINDOWS.AARCH64=https\://api.foojay.io/disco/v3.0/ids/1e91f45234d88a64dafb961c93ddc75a/redirect
+toolchainUrl.WINDOWS.X86_64=https\://api.foojay.io/disco/v3.0/ids/552c7bffe0370c66410a51c55985b511/redirect
+toolchainVersion=21
+</file>
+
+<file path="gradle/wrapper/gradle-wrapper.properties">
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.4.0-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+</file>
+
+<file path="gradlew">
+#!/bin/sh
+
+#
+# Copyright © 2015 the original authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+##############################################################################
+#
+#   Gradle start up script for POSIX generated by Gradle.
+#
+#   Important for running:
+#
+#   (1) You need a POSIX-compliant shell to run this script. If your /bin/sh is
+#       noncompliant, but you have some other compliant shell such as ksh or
+#       bash, then to run this script, type that shell name before the whole
+#       command line, like:
+#
+#           ksh Gradle
+#
+#       Busybox and similar reduced shells will NOT work, because this script
+#       requires all of these POSIX shell features:
+#         * functions;
+#         * expansions «$var», «${var}», «${var:-default}», «${var+SET}»,
+#           «${var#prefix}», «${var%suffix}», and «$( cmd )»;
+#         * compound commands having a testable exit status, especially «case»;
+#         * various built-in commands including «command», «set», and «ulimit».
+#
+#   Important for patching:
+#
+#   (2) This script targets any POSIX shell, so it avoids extensions provided
+#       by Bash, Ksh, etc; in particular arrays are avoided.
+#
+#       The "traditional" practice of packing multiple parameters into a
+#       space-separated string is a well documented source of bugs and security
+#       problems, so this is (mostly) avoided, by progressively accumulating
+#       options in "$@", and eventually passing that to Java.
+#
+#       Where the inherited environment variables (DEFAULT_JVM_OPTS, JAVA_OPTS,
+#       and GRADLE_OPTS) rely on word-splitting, this is performed explicitly;
+#       see the in-line comments for details.
+#
+#       There are tweaks for specific operating systems such as AIX, CygWin,
+#       Darwin, MinGW, and NonStop.
+#
+#   (3) This script is generated from the Groovy template
+#       https://github.com/gradle/gradle/blob/b631911858264c0b6e4d6603d677ff5218766cee/platforms/jvm/plugins-application/src/main/resources/org/gradle/api/internal/plugins/unixStartScript.txt
+#       within the Gradle project.
+#
+#       You can find Gradle at https://github.com/gradle/gradle/.
+#
+##############################################################################
+
+# Attempt to set APP_HOME
+
+# Resolve links: $0 may be a link
+app_path=$0
+
+# Need this for daisy-chained symlinks.
+while
+    APP_HOME=${app_path%"${app_path##*/}"}  # leaves a trailing /; empty if no leading path
+    [ -h "$app_path" ]
+do
+    ls=$( ls -ld "$app_path" )
+    link=${ls#*' -> '}
+    case $link in             #(
+      /*)   app_path=$link ;; #(
+      *)    app_path=$APP_HOME$link ;;
+    esac
+done
+
+# This is normally unused
+# shellcheck disable=SC2034
+APP_BASE_NAME=${0##*/}
+# Discard cd standard output in case $CDPATH is set (https://github.com/gradle/gradle/issues/25036)
+APP_HOME=$( cd -P "${APP_HOME:-./}" > /dev/null && printf '%s\n' "$PWD" ) || exit
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+MAX_FD=maximum
+
+warn () {
+    echo "$*"
+} >&2
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+} >&2
+
+# OS specific support (must be 'true' or 'false').
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "$( uname )" in                #(
+  CYGWIN* )         cygwin=true  ;; #(
+  Darwin* )         darwin=true  ;; #(
+  MSYS* | MINGW* )  msys=true    ;; #(
+  NONSTOP* )        nonstop=true ;;
+esac
+
+
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD=$JAVA_HOME/jre/sh/java
+    else
+        JAVACMD=$JAVA_HOME/bin/java
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+else
+    JAVACMD=java
+    if ! command -v java >/dev/null 2>&1
+    then
+        die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+fi
+
+# Increase the maximum file descriptors if we can.
+if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
+    case $MAX_FD in #(
+      max*)
+        # In POSIX sh, ulimit -H is undefined. That's why the result is checked to see if it worked.
+        # shellcheck disable=SC2039,SC3045
+        MAX_FD=$( ulimit -H -n ) ||
+            warn "Could not query maximum file descriptor limit"
+    esac
+    case $MAX_FD in  #(
+      '' | soft) :;; #(
+      *)
+        # In POSIX sh, ulimit -n is undefined. That's why the result is checked to see if it worked.
+        # shellcheck disable=SC2039,SC3045
+        ulimit -n "$MAX_FD" ||
+            warn "Could not set maximum file descriptor limit to $MAX_FD"
+    esac
+fi
+
+# Collect all arguments for the java command, stacking in reverse order:
+#   * args from the command line
+#   * the main class name
+#   * -classpath
+#   * -D...appname settings
+#   * --module-path (only if needed)
+#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and GRADLE_OPTS environment variables.
+
+# For Cygwin or MSYS, switch paths to Windows format before running java
+if "$cygwin" || "$msys" ; then
+    APP_HOME=$( cygpath --path --mixed "$APP_HOME" )
+
+    JAVACMD=$( cygpath --unix "$JAVACMD" )
+
+    # Now convert the arguments - kludge to limit ourselves to /bin/sh
+    for arg do
+        if
+            case $arg in                                #(
+              -*)   false ;;                            # don't mess with options #(
+              /?*)  t=${arg#/} t=/${t%%/*}              # looks like a POSIX filepath
+                    [ -e "$t" ] ;;                      #(
+              *)    false ;;
+            esac
+        then
+            arg=$( cygpath --path --ignore --mixed "$arg" )
+        fi
+        # Roll the args list around exactly as many times as the number of
+        # args, so each arg winds up back in the position where it started, but
+        # possibly modified.
+        #
+        # NB: a `for` loop captures its iteration list before it begins, so
+        # changing the positional parameters here affects neither the number of
+        # iterations, nor the values presented in `arg`.
+        shift                   # remove old arg
+        set -- "$@" "$arg"      # push replacement arg
+    done
+fi
+
+
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+# Collect all arguments for the java command:
+#   * DEFAULT_JVM_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,
+#     and any embedded shellness will be escaped.
+#   * For example: A user cannot expect ${Hostname} to be expanded, as it is an environment variable and will be
+#     treated as '${Hostname}' itself on the command line.
+
+set -- \
+        "-Dorg.gradle.appname=$APP_BASE_NAME" \
+        -jar "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+        "$@"
+
+# Stop when "xargs" is not available.
+if ! command -v xargs >/dev/null 2>&1
+then
+    die "xargs is not available"
+fi
+
+# Use "xargs" to parse quoted args.
+#
+# With -n1 it outputs one arg per line, with the quotes and backslashes removed.
+#
+# In Bash we could simply go:
+#
+#   readarray ARGS < <( xargs -n1 <<<"$var" ) &&
+#   set -- "${ARGS[@]}" "$@"
+#
+# but POSIX shell has neither arrays nor command substitution, so instead we
+# post-process each arg (as a line of input to sed) to backslash-escape any
+# character that might be a shell metacharacter, then use eval to reverse
+# that process (while maintaining the separation between arguments), and wrap
+# the whole thing up as a single "set" statement.
+#
+# This will of course break if any of these variables contains a newline or
+# an unmatched quote.
+#
+
+eval "set -- $(
+        printf '%s\n' "$DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS" |
+        xargs -n1 |
+        sed ' s~[^-[:alnum:]+,./:=@_]~\\&~g; ' |
+        tr '\n' ' '
+    )" '"$@"'
+
+exec "$JAVACMD" "$@"
+</file>
+
+<file path="gradlew.bat">
+@rem
+@rem Copyright 2015 the original author or authors.
+@rem
+@rem Licensed under the Apache License, Version 2.0 (the "License");
+@rem you may not use this file except in compliance with the License.
+@rem You may obtain a copy of the License at
+@rem
+@rem      https://www.apache.org/licenses/LICENSE-2.0
+@rem
+@rem Unless required by applicable law or agreed to in writing, software
+@rem distributed under the License is distributed on an "AS IS" BASIS,
+@rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@rem See the License for the specific language governing permissions and
+@rem limitations under the License.
+@rem
+@rem SPDX-License-Identifier: Apache-2.0
+@rem
+
+@if "%DEBUG%"=="" @echo off
+@rem ##########################################################################
+@rem
+@rem  Gradle startup script for Windows
+@rem
+@rem ##########################################################################
+
+@rem Set local scope for the variables with windows NT shell
+if "%OS%"=="Windows_NT" setlocal
+
+set DIRNAME=%~dp0
+if "%DIRNAME%"=="" set DIRNAME=.
+@rem This is normally unused
+set APP_BASE_NAME=%~n0
+set APP_HOME=%DIRNAME%
+
+@rem Resolve any "." and ".." in APP_HOME to make it shorter.
+for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
+
+@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+
+@rem Find java.exe
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if %ERRORLEVEL% equ 0 goto execute
+
+echo. 1>&2
+echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2
+echo. 1>&2
+echo Please set the JAVA_HOME variable in your environment to match the 1>&2
+echo location of your Java installation. 1>&2
+
+goto fail
+
+:findJavaFromJavaHome
+set JAVA_HOME=%JAVA_HOME:"=%
+set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+
+if exist "%JAVA_EXE%" goto execute
+
+echo. 1>&2
+echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME% 1>&2
+echo. 1>&2
+echo Please set the JAVA_HOME variable in your environment to match the 1>&2
+echo location of your Java installation. 1>&2
+
+goto fail
+
+:execute
+@rem Setup the command line
+
+
+
+@rem Execute Gradle
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
+
+:end
+@rem End local scope for the variables with windows NT shell
+if %ERRORLEVEL% equ 0 goto mainEnd
+
+:fail
+rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
+rem the _cmd.exe /c_ return code!
+set EXIT_CODE=%ERRORLEVEL%
+if %EXIT_CODE% equ 0 set EXIT_CODE=1
+if not ""=="%GRADLE_EXIT_CONSOLE%" exit %EXIT_CODE%
+exit /b %EXIT_CODE%
+
+:mainEnd
+if "%OS%"=="Windows_NT" endlocal
+
+:omega
+</file>
+
+<file path="lwjgl3/build.gradle">
+buildscript {
+  repositories {
+    gradlePluginPortal()
+  }
+  dependencies {
+    classpath "io.github.fourlastor:construo:2.1.0"
+    if(enableGraalNative == 'true') {
+      classpath "org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.28"
+    }
+  }
+}
+plugins {
+  id "application"
+}
+apply plugin: 'io.github.fourlastor.construo'
+
+
+import io.github.fourlastor.construo.Target
+
+sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
+application.mainClass = 'com.boxinggame.lwjgl3.Lwjgl3Launcher'
+application.applicationName = appName
+eclipse.project.name = appName + '-lwjgl3'
+java.sourceCompatibility = 17
+java.targetCompatibility = 17
+if (JavaVersion.current().isJava9Compatible()) {
+        compileJava.options.release.set(17)
+}
+
+dependencies {
+  implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+  implementation project(':core')
+
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
+      implementation "io.github.berstanio:gdx-svmhelper-extension-freetype:$graalHelperVersion"
+
+    }
+}
+
+def os = System.properties['os.name'].toLowerCase(Locale.ROOT)
+
+run {
+  workingDir = rootProject.file('assets').path
+// You can uncomment the next line if your IDE claims a build failure even when the app closed properly.
+  //setIgnoreExitValue(true)
+
+  if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
+}
+
+jar {
+// sets the name of the .jar file this produces to the name of the game or app, with the version after.
+  archiveFileName.set("${appName}-${projectVersion}.jar")
+// the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  dependsOn configurations.runtimeClasspath
+  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+// these "exclude" lines remove some unnecessary duplicate files in the output JAR.
+  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  dependencies {
+    exclude('META-INF/INDEX.LIST', 'META-INF/maven/**')
+  }
+// setting the manifest makes the JAR runnable.
+// enabling native access helps avoid a warning when Java 24 or later runs the JAR.
+// setting Multi-Release to true allows LWJGL3 to use different classes on recent Java versions.
+  manifest {
+    attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED', 'Multi-Release': 'true'
+  }
+// this last step may help on some OSes that need extra instruction to make runnable JARs.
+  doLast {
+    file(archiveFile).setExecutable(true, false)
+  }
+}
+
+// Builds a JAR that only includes the files needed to run on macOS, not Windows or Linux.
+// The file size for a Mac-only JAR is about 7MB smaller than a cross-platform JAR.
+tasks.register("jarMac") {
+  dependsOn("jar")
+  group("build")
+  jar.archiveFileName.set("${appName}-${projectVersion}-mac.jar")
+  jar.exclude("windows/x86/**", "windows/x64/**", "linux/arm32/**", "linux/arm64/**", "linux/x64/**", "**/*.dll", "**/*.so",
+    'META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  dependencies {
+    jar.exclude("windows/x86/**", "windows/x64/**", "linux/arm32/**", "linux/arm64/**", "linux/x64/**",
+      'META-INF/INDEX.LIST', 'META-INF/maven/**')
+  }
+}
+
+// Builds a JAR that only includes the files needed to run on Linux, not Windows or macOS.
+// The file size for a Linux-only JAR is about 5MB smaller than a cross-platform JAR.
+tasks.register("jarLinux") {
+  dependsOn("jar")
+  group("build")
+  jar.archiveFileName.set("${appName}-${projectVersion}-linux.jar")
+  jar.exclude("windows/x86/**", "windows/x64/**", "macos/arm64/**", "macos/x64/**", "**/*.dll", "**/*.dylib",
+    'META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  dependencies {
+    jar.exclude("windows/x86/**", "windows/x64/**", "macos/arm64/**", "macos/x64/**",
+      'META-INF/INDEX.LIST', 'META-INF/maven/**')
+  }
+}
+
+// Builds a JAR that only includes the files needed to run on Windows, not Linux or macOS.
+// The file size for a Windows-only JAR is about 6MB smaller than a cross-platform JAR.
+tasks.register("jarWin") {
+  dependsOn("jar")
+  group("build")
+  jar.archiveFileName.set("${appName}-${projectVersion}-win.jar")
+  jar.exclude("macos/arm64/**", "macos/x64/**", "linux/arm32/**", "linux/arm64/**", "linux/x64/**", "**/*.dylib", "**/*.so",
+    'META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  dependencies {
+    jar.exclude("macos/arm64/**", "macos/x64/**", "linux/arm32/**", "linux/arm64/**", "linux/x64/**",
+      'META-INF/INDEX.LIST', 'META-INF/maven/**')
+  }
+}
+
+construo {
+  // name of the executable
+  name.set(appName)
+  // human-readable name, used for example in the `.app` name for macOS
+  humanName.set(appName)
+  jlink {
+    guessModulesFromJar.set(false)
+    // You may need to add more modules, as needed.
+    modules.addAll("java.base", "java.management", "java.desktop", "jdk.unsupported")
+  }
+
+  targets.configure {
+    register("linuxX64", Target.Linux) {
+      architecture.set(Target.Architecture.X86_64)
+      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_linux_hotspot_21.0.10_7.tar.gz")
+      // Linux does not currently have a way to set the icon on the executable
+    }
+    register("macM1", Target.MacOs) {
+      architecture.set(Target.Architecture.AARCH64)
+      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.10_7.tar.gz")
+      // macOS needs an identifier
+      identifier.set("com.boxinggame." + appName)
+      // Optional: icon for macOS, as an ICNS file
+      macIcon.set(project.file("icons/logo.icns"))
+    }
+    register("macX64", Target.MacOs) {
+      architecture.set(Target.Architecture.X86_64)
+      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_mac_hotspot_21.0.10_7.tar.gz")
+      // macOS needs an identifier
+      identifier.set("com.boxinggame." + appName)
+      // Optional: icon for macOS, as an ICNS file
+      macIcon.set(project.file("icons/logo.icns"))
+    }
+    register("winX64", Target.Windows) {
+      architecture.set(Target.Architecture.X86_64)
+      // Optional: icon for Windows, as a PNG
+      icon.set(project.file("icons/logo.png"))
+      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.10_7.zip")
+      // Uncomment the next line to show a console when the game runs, to print messages.
+      //useConsole.set(true)
+    }
+  }
+}
+
+// Equivalent to the jar task; here for compatibility with gdx-setup.
+tasks.register('dist') {
+  dependsOn 'jar'
+}
+
+distributions {
+  main {
+    contents {
+      into('libs') {
+        project.configurations.runtimeClasspath.files.findAll { file ->
+          file.getName() != project.tasks.jar.outputs.files.singleFile.name
+        }.each { file ->
+          exclude file.name
+        }
+      }
+    }
+  }
+}
+
+startScripts.dependsOn(':lwjgl3:jar')
+startScripts.classpath = project.tasks.jar.outputs.files
+
+if(enableGraalNative == 'true') {
+  apply from: file("nativeimage.gradle")
+}
+</file>
+
+<file path="lwjgl3/nativeimage.gradle">
+project(":lwjgl3") {
+  apply plugin: "org.graalvm.buildtools.native"
+
+  graalvmNative {
+    binaries {
+      main {
+        imageName = appName
+        mainClass = application.mainClass
+        requiredVersion = '23.0'
+        buildArgs.add("-march=compatibility")
+        jvmArgs.addAll("-Dfile.encoding=UTF8")
+        sharedLibrary = false
+        resources.autodetect()
+      }
+    }
+  }
+
+  run {
+    doNotTrackState("Running the app should not be affected by Graal.")
+  }
+
+  // Modified from https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/ ; thanks again, Lyze!
+  // This creates a resource-config.json file based on the contents of the assets folder (and the libGDX icons).
+  // This file is used by Graal Native to embed those specific files.
+  // This has to run before nativeCompile, so it runs at the start of an unrelated resource-handling command.
+  generateResourcesConfigFile.doFirst {
+    def assetsFolder = new File("${project.rootDir}/assets/")
+    def lwjgl3 = project(':lwjgl3')
+    def resFolder = new File("${lwjgl3.projectDir}/src/main/resources/META-INF/native-image/${lwjgl3.ext.appName}")
+    resFolder.mkdirs()
+    def resFile = new File(resFolder, "resource-config.json")
+    resFile.delete()
+    resFile.append(
+            """{
+  "resources":{
+  "includes":[
+    {
+      "pattern": ".*(""")
+    // This adds every filename in the assets/ folder to a pattern that adds those files as resources.
+    fileTree(assetsFolder).each {
+      // The backslash-Q and backslash-E escape the start and end of a literal string, respectively.
+      resFile.append("\\\\Q${it.name}\\\\E|")
+    }
+    // We also match all of the window icon images this way and the font files that are part of libGDX.
+    resFile.append(
+            """libgdx.+\\\\.png|lsans.+)"
+    }
+  ]},
+  "bundles":[]
+}"""
+    )
+  }
+}
+</file>
+
+<file path="lwjgl3/src/main/java/com/boxinggame/lwjgl3/StartupHelper.java">
+/*
+ * Copyright 2020 damios
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// Note, the above license and copyright applies to this file only.
+package com.boxinggame.lwjgl3;
+
+import com.badlogic.gdx.Version;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3NativesLoader;
+
+import org.lwjgl.system.JNI;
+import org.lwjgl.system.linux.UNISTD;
+import org.lwjgl.system.macosx.LibC;
+import org.lwjgl.system.macosx.ObjCRuntime;
+
+import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * A helper object for game startup, featuring three utilities related to LWJGL3 on various operating systems.
+ * <p>
+ * The utilities are as follows:
+ * <ul>
+ *  <li> Windows: Prevents a common crash related to LWJGL3's extraction of shared library files.</li>
+ *  <li> macOS: Spawns a child JVM process with {@code -XstartOnFirstThread} in the JVM args (if it was not already).
+ *  This is required for LWJGL3 to work on macOS.</li>
+ *  <li> Linux (NVIDIA GPUs only): Spawns a child JVM process with the {@code __GL_THREADED_OPTIMIZATIONS}
+ *  {@link System#getenv(String) Environment Variable} set to {@code 0} (if it was not already). This is required for
+ *  LWJGL3 to work on Linux with NVIDIA GPUs.</li>
+ * </ul>
+ * <a href="https://jvm-gaming.org/t/starting-jvm-on-mac-with-xstartonfirstthread-programmatically/57547">Based on this java-gaming.org post by kappa</a>
+ * @author damios
+ */
+public class StartupHelper {
+
+	private StartupHelper() {}
+
+	private static final String JVM_RESTARTED_ARG = "jvmIsRestarted";
+
+	/**
+	 * Must only be called on Linux. Check OS first (or use short-circuit evaluation)!
+	 * @return whether NVIDIA drivers are present on Linux.
+	 */
+	public static boolean isLinuxNvidia() {
+		String[] drivers = new File("/proc/driver").list(
+			(dir, path) -> path.toUpperCase(Locale.ROOT).contains("NVIDIA")
+		);
+		if (drivers == null) return false;
+		return drivers.length > 0;
+	}
+
+	/**
+	 * Applies the utilities as described by {@link StartupHelper}'s Javadoc.
+	 * <p>
+	 * All {@link System#getenv() Environment Variables} are copied to the child JVM process (if it is spawned), as
+	 * specified by {@link ProcessBuilder#environment()}; the same applies for
+	 * {@link System#getProperties() System Properties}.
+	 * <p>
+	 * <b>Usage:</b>
+	 * <pre><code>
+	 * public static void main(String[] args) {
+	 * 	 if (StartupHelper.startNewJvmIfRequired()) return;
+	 * 	 // ... The rest of main() goes here, as normal.
+	 * }
+	 * </code></pre>
+	 * @return whether a child JVM process was spawned or not.
+	 */
+	public static boolean startNewJvmIfRequired() {
+		return startNewJvmIfRequired(true);
+	}
+
+	/**
+	 * Applies the utilities as described by {@link StartupHelper}'s Javadoc.
+	 * <p>
+	 * All {@link System#getenv() Environment Variables} are copied to the child JVM process (if it is spawned), as
+	 * specified by {@link ProcessBuilder#environment()}; the same applies for
+	 * {@link System#getProperties() System Properties}.
+	 * <p>
+	 * <b>Usage:</b>
+	 * <pre><code>
+	 * public static void main(String[] args) {
+	 *   // The parameter on the next line could instead be false if you don't want to inherit IO.
+	 * 	 if (StartupHelper.startNewJvmIfRequired(true)) return;
+	 * 	 // ... The rest of main() goes here, as normal.
+	 * }
+	 * </code></pre>
+	 * @param inheritIO whether I/O should be inherited in the child JVM process. Please note that enabling this will
+	 *                  block the thread until the child JVM process stops executing.
+	 * @return whether a child JVM process was spawned or not.
+	 */
+	public static boolean startNewJvmIfRequired(boolean inheritIO) {
+		String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
+		if (osName.contains("mac")) return startNewJvm0(/*isMac =*/ true, inheritIO);
+		if (osName.contains("windows")) {
+			// Here, we are trying to work around an issue with how LWJGL3 loads its extracted .dll files.
+			// By default, LWJGL3 extracts to the directory specified by "java.io.tmpdir": usually, the user's home.
+			// If the user's name has non-ASCII (or some non-alphanumeric) characters in it, that would fail.
+			// By extracting to the relevant "ProgramData" folder, which is usually "C:\ProgramData", we avoid this.
+			// We also temporarily change the "user.name" property to one without any chars that would be invalid.
+			// We revert our changes immediately after loading LWJGL3 natives.
+			String programData = System.getenv("ProgramData");
+			if (programData == null) programData = "C:\\Temp"; // if ProgramData isn't set, try some fallback.
+			String prevTmpDir = System.getProperty("java.io.tmpdir", programData);
+			String prevUser = System.getProperty("user.name", "libGDX_User");
+			System.setProperty("java.io.tmpdir", programData + "\\libGDX-temp");
+			System.setProperty(
+				"user.name",
+				("User_" + prevUser.hashCode() + "_GDX" + Version.VERSION).replace('.', '_')
+			);
+			Lwjgl3NativesLoader.load();
+			System.setProperty("java.io.tmpdir", prevTmpDir);
+			System.setProperty("user.name", prevUser);
+			return false;
+		}
+		return startNewJvm0(/*isMac =*/ false, inheritIO);
+	}
+
+	private static final String MAC_JRE_ERR_MSG = "A Java installation could not be found. If you are distributing this app with a bundled JRE, be sure to set the '-XstartOnFirstThread' argument manually!";
+	private static final String LINUX_JRE_ERR_MSG = "A Java installation could not be found. If you are distributing this app with a bundled JRE, be sure to set the environment variable '__GL_THREADED_OPTIMIZATIONS' to '0'!";
+	private static final String CHILD_LOOP_ERR_MSG = "The current JVM process is a spawned child JVM process, but StartupHelper has attempted to spawn another child JVM process! This is a broken state, and should not normally happen! Your game may crash or not function properly!";
+
+	/**
+	 * Spawns a child JVM process if on macOS, or on Linux with NVIDIA drivers.
+	 * <p>
+	 * All {@link System#getenv() Environment Variables} are copied to the child JVM process (if it is spawned), as
+	 * specified by {@link ProcessBuilder#environment()}; the same applies for
+	 * {@link System#getProperties() System Properties}.
+	 * @param isMac whether the current OS is macOS. If this is `false` then the current OS is assumed to be Linux (and
+	 *             an immediate check for NVIDIA drivers is performed).
+	 * @param inheritIO whether I/O should be inherited in the child JVM process. Please note that enabling this will
+	 *                 block the thread until the child JVM process stops executing.
+	 * @return whether a child JVM process was spawned or not.
+	 */
+	public static boolean startNewJvm0(boolean isMac, boolean inheritIO) {
+		long processID = getProcessID(isMac);
+		if (!isMac) {
+			// No need to restart non-NVIDIA Linux
+			if (!isLinuxNvidia()) return false;
+			// check whether __GL_THREADED_OPTIMIZATIONS is already disabled
+			if ("0".equals(System.getenv("__GL_THREADED_OPTIMIZATIONS"))) return false;
+		} else {
+			// There is no need for -XstartOnFirstThread on Graal native image
+			if (!System.getProperty("org.graalvm.nativeimage.imagecode", "").isEmpty()) return false;
+
+			// Checks if we are already on the main thread, such as from running via Construo.
+			long objcMsgSend = ObjCRuntime.getLibrary().getFunctionAddress("objc_msgSend");
+			long nsThread = ObjCRuntime.objc_getClass("NSThread");
+			long currentThread = JNI.invokePPP(nsThread, ObjCRuntime.sel_getUid("currentThread"), objcMsgSend);
+			boolean isMainThread = JNI.invokePPZ(currentThread, ObjCRuntime.sel_getUid("isMainThread"), objcMsgSend);
+			if (isMainThread) return false;
+
+			if ("1".equals(System.getenv("JAVA_STARTED_ON_FIRST_THREAD_" + processID))) return false;
+		}
+
+		// Check whether this JVM process is a child JVM process already.
+		// This state shouldn't usually be reachable, but this stops us from endlessly spawning new child JVM processes.
+		if ("true".equals(System.getProperty(JVM_RESTARTED_ARG))) {
+			System.err.println(CHILD_LOOP_ERR_MSG);
+			return false;
+		}
+
+		// Spawn the child JVM process with updated environment variables or JVM args
+		List<String> jvmArgs = new ArrayList<>();
+		// The following line is used assuming you target Java 8, the minimum for LWJGL3.
+		String javaExecPath = System.getProperty("java.home") + "/bin/java";
+		// If targeting Java 9 or higher, you could use the following instead of the above line:
+		//String javaExecPath = ProcessHandle.current().info().command().orElseThrow()
+		if (!(new File(javaExecPath).exists())) {
+			System.err.println(getJreErrMsg(isMac));
+			return false;
+		}
+
+		jvmArgs.add(javaExecPath);
+		if (isMac) jvmArgs.add("-XstartOnFirstThread");
+		jvmArgs.add("-D" + JVM_RESTARTED_ARG + "=true");
+		jvmArgs.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
+		jvmArgs.add("-cp");
+		jvmArgs.add(System.getProperty("java.class.path"));
+		String mainClass = System.getenv("JAVA_MAIN_CLASS_" + processID);
+		if (mainClass == null) {
+			StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+			if (trace.length > 0) mainClass = trace[trace.length - 1].getClassName();
+			else {
+				System.err.println("The main class could not be determined.");
+				return false;
+			}
+		}
+		jvmArgs.add(mainClass);
+
+		try {
+			ProcessBuilder processBuilder = new ProcessBuilder(jvmArgs);
+			if (!isMac) processBuilder.environment().put("__GL_THREADED_OPTIMIZATIONS", "0");
+
+			if (!inheritIO) processBuilder.start();
+			else processBuilder.inheritIO().start().waitFor();
+		} catch (Exception e) {
+			System.err.println("There was a problem restarting the JVM.");
+			// noinspection CallToPrintStackTrace
+			e.printStackTrace();
+		}
+
+		return true;
+	}
+
+	private static String getJreErrMsg(boolean isMac) {
+		if (isMac) return MAC_JRE_ERR_MSG;
+		else return LINUX_JRE_ERR_MSG;
+	}
+
+	private static long getProcessID(boolean isMac) {
+		if (isMac) return LibC.getpid();
+		else return UNISTD.getpid();
+	}
+}
+</file>
+
+<file path="README.md">
+# BoxingGame
+
+A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+
+This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+
+## Platforms
+
+- `core`: Main module with the application logic shared by all platforms.
+- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+
+## Gradle
+
+This project uses [Gradle](https://gradle.org/) to manage dependencies.
+The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
+Useful Gradle tasks and flags:
+
+- `--continue`: when using this flag, errors will not stop the tasks from running.
+- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
+- `--offline`: when using this flag, cached dependency archives will be used.
+- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
+- `build`: builds sources and archives of every project.
+- `cleanEclipse`: removes Eclipse project data.
+- `cleanIdea`: removes IntelliJ project data.
+- `clean`: removes `build` folders, which store compiled classes and built archives.
+- `eclipse`: generates Eclipse project data.
+- `idea`: generates IntelliJ project data.
+- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
+- `lwjgl3:run`: starts the application.
+- `test`: runs unit tests (if any).
+
+Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
+For example, `core:clean` removes `build` folder only from the `core` project.
+</file>
+
+<file path="settings.gradle">
+plugins {
+  // Applies the foojay-resolver plugin to allow automatic download of JDKs.
+  id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+// A list of which subprojects to load as part of the same larger project.
+// You can remove Strings from the list and reload the Gradle project
+// if you want to temporarily disable a subproject.
+include 'lwjgl3', 'core'
+</file>
+
+<file path="core/src/main/java/input/KeyboardInput.java">
+package input;
+
+import input.InputController;
+
+public class KeyboardInput  {
+}
+</file>
+
+<file path="core/src/main/java/screen/GameOverScreen.java">
+package screen;
+
+import com.badlogic.gdx.ScreenAdapter;
+
+public class GameOverScreen extends ScreenAdapter {
+}
+</file>
+
+<file path="core/src/main/java/screen/GameScreen.java">
+package screen;
+
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.ScreenAdapter;
+import controller.P1Controller;
+import controller.P2Controller;
+import entity.Fighter;
+import input.InputController;
+import util.Constants;
+
+public class GameScreen extends ScreenAdapter {
+
+}
+</file>
+
+<file path="core/src/main/java/screen/MenuScreen.java">
+package screen;
+
+import com.badlogic.gdx.ScreenAdapter;
+
+public class MenuScreen extends ScreenAdapter {
+}
+</file>
+
+<file path="core/src/main/java/util/Constants.java">
+package util;
+
+public final class Constants {
+
+    private Constants() {}
+
+    // --- CẤU HÌNH HỆ THỐNG ---
+    public static final String GAME_TITLE = "HUST Boxingame";
+    public static final int APP_WIDTH     = 1280;
+    public static final int APP_HEIGHT    = 720;
+    public static final int TARGET_FPS    = 60;
+
+    // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
+    public static final int   MAX_HP            = 20;    // Đấm 20 phát là đi
+    public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
+    public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
+    public static final float CHAR_SIZE         = 200f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
+
+    // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
+    public static final float DAMAGE_PUNCH      = 1f;
+    public static final float DAMAGE_KICK       = 1f;
+    public static final float DAMAGE_SKILL      = 5f;
+
+    // --- CHỈ SỐ NĂNG LƯỢNG ---
+    public static final float MANA_GAIN_PER_HIT = 1f;    // Trúng 1 đòn hồi 1 mana
+    public static final float MANA_COST_SKILL   = 10f;
+
+    // --- THÔNG SỐ TRẬN ĐẤU ---
+    public static final float ROUND_TIME        = 180f;
+    public static final int   PORT_UDP_PYTHON   = 5005;
+
+    // --- 5 HÀNH ĐỘNG DUY NHẤT ---
+    public enum Action {
+        IDLE,       // Đứng yên
+        PUNCH,      // Kỹ năng 1
+        KICK,       // Kỹ năng 2
+        DUCK,       // Kỹ năng 3 (Né đòn cao)
+        BLOCK,      // Kỹ năng 4 (Giảm dame/Vô hiệu hóa)
+        SKILL,      // Tuyệt kỹ (Dùng khi đủ 10 mana)
+        HIT,        // Bị dính đòn (Trạng thái thụ động)
+        DEAD        // Thua
+    }
+
+    public enum Side { LEFT, RIGHT }
+    public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }
+
+    // --- ASSETS PATHS ---
+    public static final String TEXTURE_ATLAS = "images/boxing_game.atlas";
+    public static final String BG_GAME       = "images/background/arena_bg.png";
+    public static final String SFX_PUNCH     = "sounds/sfx/punch.mp3";
+    public static final String SFX_KICK      = "sounds/sfx/kick.wav";
+    public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
+    public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
+}
+</file>
+
+<file path="lwjgl3/src/main/java/com/boxinggame/lwjgl3/Lwjgl3Launcher.java">
+package com.boxinggame.lwjgl3;
+
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import main.Main;
+
+/** Launches the desktop (LWJGL3) application. */
+public class Lwjgl3Launcher {
+    public static void main(String[] args) {
+        if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
+        createApplication();
+    }
+
+    private static Lwjgl3Application createApplication() {
+        return new Lwjgl3Application(new Main(), getDefaultConfiguration());
+    }
+
+    private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
+        Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
+        configuration.setTitle("BoxingGame");
+        //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
+        //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
+        configuration.useVsync(true);
+        //// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
+        //// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
+        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
+        //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
+        //// useful for testing performance, but can also be very stressful to some hardware.
+        //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
+
+        configuration.setWindowedMode(640, 480);
+        //// You can change these files; they are in lwjgl3/src/main/resources/ .
+        //// They can also be loaded from the root of assets/ .
+        configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
+
+        //// This could improve compatibility with Windows machines with buggy OpenGL drivers, Macs
+        //// with Apple Silicon that have to emulate compatibility with OpenGL anyway, and more.
+        //// This uses the dependency `com.badlogicgames.gdx:gdx-lwjgl3-angle` to function.
+        //// You would need to add this line to lwjgl3/build.gradle , below the dependency on `gdx-backend-lwjgl3`:
+        ////     implementation "com.badlogicgames.gdx:gdx-lwjgl3-angle:$gdxVersion"
+        //// You can choose to add the following line and the mentioned dependency if you want; they
+        //// are not intended for games that use GL30 (which is compatibility with OpenGL ES 3.0).
+        //// Know that it might not work well in some cases.
+//        configuration.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20, 0, 0);
+
+        return configuration;
+    }
+}
+</file>
+
+<file path="core/src/main/java/input/InputController.java">
+package input;
+
+public interface InputController {
+
+    boolean kick();
+
+    boolean duck();  //cúi xuống
+
+    boolean punch();
+
+    boolean block();
+
+    boolean skill();
+
+    /**
+     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
+     */
+    void update(float delta);
+
+    /**
+     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
+     */
+    void reset();
+
+}
+</file>
+
+</files>
