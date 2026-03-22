@@ -29,7 +29,7 @@ public class MenuGame extends ScreenAdapter {
 
     public MenuGame(Main game) {
         this.game = game;
-        background = new Texture("images/background/background.jpg");
+        background = new Texture("images/background/background2.png");
         font = new BitmapFont();
         font.getData().setScale(2f);
         layout = new GlyphLayout();
