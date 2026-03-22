@@ -47,9 +47,11 @@ assets/images/background/background.jpg
 assets/images/p1/idle.png
 assets/images/p2/idle.png
 assets/libgdx.png
+assets/sounds/bg_music.mp3
+assets/sounds/hit.mp3
+assets/sounds/punch.mp3
 build.gradle
 core/build.gradle
-core/src/main/java/com/boxinggame/main/Main.java
 core/src/main/java/controller/FighterController.java
 core/src/main/java/controller/P1Controller.java
 core/src/main/java/controller/P2Controller.java
@@ -59,6 +61,7 @@ core/src/main/java/entity/HitBox.java
 core/src/main/java/input/CameraInput.java
 core/src/main/java/input/InputController.java
 core/src/main/java/input/KeyboardInput.java
+core/src/main/java/main/Main.java
 core/src/main/java/screen/GameOverScreen.java
 core/src/main/java/screen/GameScreen.java
 core/src/main/java/screen/MenuScreen.java
@@ -384,109 +387,10 @@ jar {
 }
 </file>
 
-<file path="core/src/main/java/com/boxinggame/main/Main.java">
-package com.boxinggame.main;
-
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils;
-
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class Main extends ApplicationAdapter {
-    private SpriteBatch batch;
-    private Texture image;
-
-    @Override
-    public void create() {
-        batch = new SpriteBatch();
-        image = new Texture("libgdx.png");
-    }
-
-    @Override
-    public void render() {
-        ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
-        batch.begin();
-        batch.draw(image, 140, 210);
-        batch.end();
-    }
-
-    @Override
-    public void dispose() {
-        batch.dispose();
-        image.dispose();
-    }
-}
-</file>
-
-<file path="core/src/main/java/controller/FighterController.java">
-package controller;
-
-public abstract class FighterController {
-
-}
-</file>
-
-<file path="core/src/main/java/controller/P1Controller.java">
-package controller;
-
-
-public class P1Controller extends FighterController {
-
-}
-</file>
-
-<file path="core/src/main/java/controller/P2Controller.java">
-package controller;
-
-public class P2Controller extends FighterController {
-
-}
-</file>
-
 <file path="core/src/main/java/effect/EffectManager.java">
 package effect;
 
 public class EffectManager {
-}
-</file>
-
-<file path="core/src/main/java/entity/Fighter.java">
-package entity;
-
-import util.Constants;
-import util.Constants.Action;
-import util.Constants.Side;
-
-public class Fighter {
-    private Side side;
-    private Action currentState;
-    private float hp, mana;
-
-    public Fighter(Side side) {
-        this.side = side;
-        this.hp = Constants.MAX_HP; // 20 máu
-        this.mana = 0;
-        this.currentState = Action.IDLE;
-    }
-
-    public void update(float delta) {
-        // Tạm thời để trống cho Dev 2 làm logic đếm ngược thời gian đấm
-    }
-
-    public void performAction(Action action) {
-        this.currentState = action;
-        System.out.println(side + " thực hiện: " + action);
-    }
-
-    public void takeDamage(float damage) {
-        this.hp -= damage;
-        if (this.hp < 0) this.hp = 0;
-    }
-
-    // Getters để vẽ UI và tính va chạm
-    public float getHp() { return hp; }
-    public Action getCurrentState() { return currentState; }
 }
 </file>
 
@@ -504,10 +408,26 @@ public class CameraInput {
 }
 </file>
 
-<file path="core/src/main/java/sound/SoundManager.java">
-package sound;
+<file path="core/src/main/java/main/Main.java">
+package main;
 
-public class SoundManager {
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import screen.GameScreen;
+
+public class Main extends Game {
+    public SpriteBatch batch; // PHẢI LÀ PUBLIC
+
+    @Override
+    public void create() {
+        batch = new SpriteBatch();
+        this.setScreen(new GameScreen(this));
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
+    }
 }
 </file>
 
@@ -1538,12 +1458,153 @@ plugins {
 include 'lwjgl3', 'core'
 </file>
 
-<file path="core/src/main/java/input/KeyboardInput.java">
-package input;
+<file path="core/src/main/java/controller/FighterController.java">
+package controller;
 
+import entity.Fighter;
+import input.InputController;
+import util.Constants;
+import util.Constants.Action;
+
+public abstract class FighterController {
+    protected Fighter fighter;
+    protected InputController input;
+
+    public FighterController(Fighter fighter, InputController input) {
+        this.fighter = fighter;
+        this.input = input;
+    }
+
+    public void update(float delta) {
+        // 1. Cập nhật trạng thái input (đọc phím hoặc nhận dữ liệu từ Camera)
+        input.update(delta);
+
+        // 2. Kiểm tra lệnh và ra lệnh cho Fighter thực hiện
+        // Thứ tự ưu tiên có thể tùy chỉnh: Skill > Punch > Kick...
+        if (input.skill()) {
+            fighter.performAction(Action.SKILL);
+        } else if (input.punch()) {
+            fighter.performAction(Action.PUNCH);
+        } else if (input.kick()) {
+            fighter.performAction(Action.KICK);
+        } else if (input.duck()) {
+            fighter.performAction(Action.DUCK);
+        } else if (input.block()) {
+            fighter.performAction(Action.BLOCK);
+        }
+
+        // 3. Reset trạng thái input để tránh việc bấm 1 lần mà đấm mãi mãi
+        input.reset();
+    }
+}
+</file>
+
+<file path="core/src/main/java/controller/P1Controller.java">
+package controller;
+
+import entity.Fighter;
 import input.InputController;
 
-public class KeyboardInput  {
+public class P1Controller extends FighterController {
+    public P1Controller(Fighter fighter, InputController input) {
+        super(fighter, input);
+    }
+}
+</file>
+
+<file path="core/src/main/java/controller/P2Controller.java">
+package controller;
+
+import entity.Fighter;
+import input.InputController;
+
+public class P2Controller extends FighterController {
+    public P2Controller(Fighter fighter, InputController input) {
+        super(fighter, input);
+    }
+}
+</file>
+
+<file path="core/src/main/java/entity/Fighter.java">
+package entity;
+
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import util.Constants;
+import util.Constants.Action;
+
+public class Fighter {
+    private Constants.Side side;
+    private Texture texture;
+    private float x, y;
+
+    // --- LOGIC TRẠNG THÁI (MỚI) ---
+    private Action currentState = Action.IDLE; // Mặc định là đứng yên
+    private float stateTimer = 0;              // Đếm thời gian trôi qua của một hành động
+    private final float ACTION_DURATION = 0.5f; // Mỗi cú đấm/đá kéo dài 0.5 giây
+
+    public Fighter(Constants.Side side, String imgPath) {
+        this.side = side;
+        this.texture = new Texture(imgPath);
+        this.y = Constants.GROUND_Y; // Lấy giá trị 100f từ Constants
+
+        // P1 bên trái (25% màn hình), P2 bên phải (75% màn hình)
+        if (side == Constants.Side.LEFT) {
+            this.x = Constants.APP_WIDTH * 0.25f - Constants.CHAR_SIZE / 2;
+        } else {
+            this.x = Constants.APP_WIDTH * 0.75f - Constants.CHAR_SIZE / 2;
+        }
+    }
+
+    /**
+     * Hàm ra lệnh: Khi Controller nhấn phím, nó sẽ gọi hàm này.
+     */
+    public void performAction(Action action) {
+        // Chỉ thực hiện hành động mới nếu đang đứng yên (tránh spam phím)
+        if (this.currentState == Action.IDLE) {
+            this.currentState = action;
+            this.stateTimer = 0; // Reset bộ đếm khi bắt đầu hành động mới
+            System.out.println("[LOG] " + side + " thực hiện: " + action);
+        }
+    }
+
+    /**
+     * Hàm cập nhật: Được gọi liên tục 60 FPS trong GameScreen.
+     */
+    public void update(float delta) {
+        // Nếu không phải đang đứng yên (đang đấm, đá, né...)
+        if (currentState != Action.IDLE) {
+            stateTimer += delta; // Cộng dồn thời gian thực tế
+
+            // Nếu đã thực hiện xong hành động (quá 0.5 giây)
+            if (stateTimer >= ACTION_DURATION) {
+                currentState = Action.IDLE; // Tự động quay về đứng nghỉ
+                stateTimer = 0;
+            }
+        }
+    }
+
+    public void draw(SpriteBatch batch) {
+        // Nếu là P2 (Bên PHẢI) thì lật ngang ảnh (flipX = true) để nhìn sang TRÁI
+        boolean flipX = (side == Constants.Side.RIGHT);
+
+        // Vẽ với kích thước chuẩn 200x200 từ Constants
+        batch.draw(texture,
+            x, y,
+            Constants.CHAR_SIZE, Constants.CHAR_SIZE,
+            0, 0,
+            texture.getWidth(), texture.getHeight(),
+            flipX, false);
+    }
+
+    public void dispose() {
+        texture.dispose();
+    }
+
+    // Getter để các hệ thống khác (như Collision) check trạng thái
+    public Action getCurrentState() {
+        return currentState;
+    }
 }
 </file>
 
@@ -1556,28 +1617,62 @@ public class GameOverScreen extends ScreenAdapter {
 }
 </file>
 
-<file path="core/src/main/java/screen/GameScreen.java">
-package screen;
-
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.ScreenAdapter;
-import controller.P1Controller;
-import controller.P2Controller;
-import entity.Fighter;
-import input.InputController;
-import util.Constants;
-
-public class GameScreen extends ScreenAdapter {
-
-}
-</file>
-
 <file path="core/src/main/java/screen/MenuScreen.java">
 package screen;
 
 import com.badlogic.gdx.ScreenAdapter;
 
 public class MenuScreen extends ScreenAdapter {
+}
+</file>
+
+<file path="core/src/main/java/sound/SoundManager.java">
+package sound;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
+
+public class SoundManager {
+
+    private Music backgroundMusic;
+
+    private Sound punchSound;
+    private Sound hitSound;
+
+    public void load() {
+        backgroundMusic = Gdx.audio.newMusic(
+            Gdx.files.internal("sounds/bg_music.mp3")
+        );
+
+        punchSound = Gdx.audio.newSound(
+            Gdx.files.internal("sounds/punch.mp3")
+        );
+
+        hitSound = Gdx.audio.newSound(
+            Gdx.files.internal("sounds/hit.mp3")
+        );
+    }
+
+    public void playMusic() {
+        backgroundMusic.setLooping(true);
+        backgroundMusic.setVolume(0.5f);
+        backgroundMusic.play();
+    }
+
+    public void playPunch() {
+        punchSound.play(1.0f);
+    }
+
+    public void playHit() {
+        hitSound.play(1.0f);
+    }
+
+    public void dispose() {
+        backgroundMusic.dispose();
+        punchSound.dispose();
+        hitSound.dispose();
+    }
 }
 </file>
 
@@ -1638,6 +1733,116 @@ public final class Constants {
 }
 </file>
 
+<file path="core/src/main/java/input/InputController.java">
+package input;
+
+public interface InputController {
+
+    boolean kick();
+
+    boolean duck();  //cúi xuống
+
+    boolean punch();
+
+    boolean block();
+
+    boolean skill();
+
+    /**
+     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
+     */
+    void update(float delta);
+
+    /**
+     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
+     */
+    void reset();
+
+}
+</file>
+
+<file path="core/src/main/java/input/KeyboardInput.java">
+package input;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+
+public class KeyboardInput implements InputController {
+    private int kP, kK, kD, kB, kS;
+    private boolean isP, isK, isD, isB, isS;
+
+    public KeyboardInput(int p, int k, int d, int b, int s) {
+        this.kP = p; this.kK = k; this.kD = d; this.kB = b; this.kS = s;
+    }
+
+    @Override public void update(float delta) {
+        isP = Gdx.input.isKeyJustPressed(kP);
+        isK = Gdx.input.isKeyJustPressed(kK);
+        isD = Gdx.input.isKeyPressed(kD);
+        isB = Gdx.input.isKeyPressed(kB);
+        isS = Gdx.input.isKeyJustPressed(kS);
+    }
+
+    @Override public boolean punch() { return isP; }
+    @Override public boolean kick() { return isK; }
+    @Override public boolean duck() { return isD; }
+    @Override public boolean block() { return isB; }
+    @Override public boolean skill() { return isS; }
+    @Override public void reset() { isP = isK = isS = false; }
+}
+</file>
+
+<file path="core/src/main/java/screen/GameScreen.java">
+package screen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import main.Main;
+import entity.Fighter;
+import util.Constants;
+
+public class GameScreen extends ScreenAdapter {
+    private final Main game;
+    private Texture background;
+    private Fighter p1, p2;
+
+    public GameScreen(Main game) {
+        this.game = game;
+        // Load lại cái nền xịn của ông giáo
+        background = new Texture("images/background/background.jpg");
+
+        // Khởi tạo 2 Ronaldo đối đầu
+        p1 = new Fighter(Constants.Side.LEFT, "images/p1/idle.png");
+        p2 = new Fighter(Constants.Side.RIGHT, "images/p2/idle.png");
+    }
+
+    @Override
+    public void render(float delta) {
+        // Xóa màn hình
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        game.batch.begin();
+        // 1. Vẽ nền trước (Phủ kín màn hình 1280x720)
+        game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+
+        // 2. Vẽ 2 võ sĩ (Tự động đứng đúng chỗ và đối mặt nhau)
+        p1.draw(game.batch);
+        p2.draw(game.batch);
+
+        game.batch.end();
+    }
+
+    @Override
+    public void dispose() {
+        background.dispose();
+        p1.dispose();
+        p2.dispose();
+    }
+}
+</file>
+
 <file path="lwjgl3/src/main/java/com/boxinggame/lwjgl3/Lwjgl3Launcher.java">
 package com.boxinggame.lwjgl3;
 
@@ -1669,7 +1874,7 @@ public class Lwjgl3Launcher {
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
-        configuration.setWindowedMode(640, 480);
+        configuration.setWindowedMode(1280, 720);
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
@@ -1686,34 +1891,6 @@ public class Lwjgl3Launcher {
 
         return configuration;
     }
-}
-</file>
-
-<file path="core/src/main/java/input/InputController.java">
-package input;
-
-public interface InputController {
-
-    boolean kick();
-
-    boolean duck();  //cúi xuống
-
-    boolean punch();
-
-    boolean block();
-
-    boolean skill();
-
-    /**
-     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
-     */
-    void update(float delta);
-
-    /**
-     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
-     */
-    void reset();
-
 }
 </file>
 

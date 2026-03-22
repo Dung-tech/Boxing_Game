@@ -1,5 +1,7 @@
 package util;
 
+import com.badlogic.gdx.Input;
+
 public final class Constants {
 
     private Constants() {}
@@ -11,7 +13,7 @@ public final class Constants {
     public static final int TARGET_FPS    = 60;
 
     // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
-    public static final int   MAX_HP            = 20;    // Đấm 20 phát là đi
+    public static final int   MAX_HP            = 30;    // Đấm 20 phát là đi
     public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
     public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
     public static final float CHAR_SIZE         = 200f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
@@ -40,7 +42,7 @@ public final class Constants {
         HIT,        // Bị dính đòn (Trạng thái thụ động)
         DEAD        // Thua
     }
-
+    // Thêm vào Constants.java
     public enum Side { LEFT, RIGHT }
     public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }
 
