@@ -1,3 +1,31 @@
+<<<<<<< HEAD
+# === Python ===
+python_controller/venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# === Java / Gradle (Dành cho ae làm Game) ===
+.gradle/
+build/
+bin/
+out/
+.metadata/
+.project
+.classpath
+.settings/
+
+# === VS Code & IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Hệ thống ===
+.DS_Store
+Thumbs.db
+=======
 ## Gradle:
 .gradle/
 gradle-app.setting
@@ -162,3 +190,4 @@ Thumbs.db
 ## You could also add that configuration to the text in nativeimage.gradle .
 ## You should delete or comment out the next line if you have configuration in a different resource-config.json .
 **/resource-config.json
+>>>>>>> 5a50ac97c9fe939d707ffa6391ba78b5845f0019
