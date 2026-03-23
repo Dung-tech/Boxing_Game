@@ -35,6 +35,7 @@ public class EffectManager {
     public void spawnHitEffect(float x, float y) {
         if (hitEffectTemplate != null) {
             ParticleEffect newEffect = new ParticleEffect(hitEffectTemplate);
+            newEffect.scaleEffect(5.0f);
             newEffect.setPosition(x, y);
             newEffect.start();
             activeEffects.add(newEffect);

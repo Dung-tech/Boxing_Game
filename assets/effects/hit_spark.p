@@ -1,12 +1,12 @@
 - Delay -
 active: false
-- Duration - 
+- Duration -
 lowMin: 100.0
 lowMax: 100.0
-- Count - 
-min: 0
+- Count -
+min: 20
 max: 50
-- Emission - 
+- Emission -
 lowMin: 0.0
 lowMax: 0.0
 highMin: 250.0
@@ -16,7 +16,7 @@ scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Life - 
+- Life -
 lowMin: 0.0
 lowMax: 0.0
 highMin: 500.0
@@ -30,15 +30,15 @@ timelineCount: 3
 timeline0: 0.0
 timeline1: 0.66
 timeline2: 1.0
-- Life Offset - 
+- Life Offset -
 active: false
-- X Offset - 
+- X Offset -
 active: false
-- Y Offset - 
+- Y Offset -
 active: false
-- Spawn Shape - 
+- Spawn Shape -
 shape: point
-- Spawn Width - 
+- Spawn Width -
 lowMin: 0.0
 lowMax: 0.0
 highMin: 0.0
@@ -48,7 +48,7 @@ scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Spawn Height - 
+- Spawn Height -
 lowMin: 0.0
 lowMax: 0.0
 highMin: 0.0
@@ -58,28 +58,28 @@ scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Scale - 
+- Scale -
 lowMin: 0.0
 lowMax: 0.0
-highMin: 1.0
-highMax: 1.0
+highMin: 20.0
+highMax: 30.0
 relative: false
 scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Velocity - 
+- Velocity -
 active: true
 lowMin: 0.0
 lowMax: 0.0
-highMin: 100.0
-highMax: 200.0
+highMin: 300.0
+highMax: 500.0
 relative: false
 scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Angle - 
+- Angle -
 active: true
 lowMin: 0.0
 lowMax: 0.0
@@ -90,20 +90,20 @@ scalingCount: 1
 scaling0: 1.0
 timelineCount: 1
 timeline0: 0.0
-- Rotation - 
+- Rotation -
 active: false
-- Wind - 
+- Wind -
 active: false
-- Gravity - 
+- Gravity -
 active: false
-- Tint - 
+- Tint -
 colorsCount: 3
 colors0: 1.0
 colors1: 0.12156863
 colors2: 0.047058824
 timelineCount: 1
 timeline0: 0.0
-- Transparency - 
+- Transparency -
 active: true
 scalingCount: 2
 scaling0: 1.0
@@ -111,7 +111,7 @@ scaling1: 0.0
 timelineCount: 2
 timeline0: 0.0
 timeline1: 1.0
-- Options - 
+- Options -
 attached: false
 continuous: false
 aligned: false

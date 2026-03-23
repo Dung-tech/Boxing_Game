@@ -141,8 +141,8 @@ public class MenuGame extends ScreenAdapter {
 
         game.batch.begin();
         drawCenter(game.batch, "--- HOW TO PLAY ---", Constants.APP_WIDTH, 550, Color.CYAN);
-        drawCenter(game.batch, "P1: W, A, S, D to Move | J, K to Punch/Kick", Constants.APP_WIDTH, 450, Color.WHITE);
-        drawCenter(game.batch, "P2: Arrow Keys to Move | 1, 2 to Punch/Kick", Constants.APP_WIDTH, 380, Color.WHITE);
+        drawCenter(game.batch, "P1: D, A to Punch/Kick; W,S to BLOCK, DUCK; SPACE to SKILL", Constants.APP_WIDTH, 450, Color.WHITE);
+        drawCenter(game.batch, "P2: ->,<- to Punch/Kick; UP, DOWN to BLOCK, DUCK; ENTER to SKILL", Constants.APP_WIDTH, 380, Color.WHITE);
         drawCenter(game.batch, "Press ESC to go back", Constants.APP_WIDTH, 200, Color.GRAY);
         game.batch.end();
     }

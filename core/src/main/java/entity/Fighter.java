@@ -2,138 +2,109 @@ package entity;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import entity.component.FighterStats;
 import util.Constants;
 import util.Constants.Action;
-
 import java.util.HashMap;
 import java.util.Map;
 
 public class Fighter {
-    private int hp = Constants.MAX_HP;
-    private float mana = 0;
-    private Constants.Side side;
-    private Texture texture;
     private float x, y;
+    private Constants.Side side;
+    private FighterStats stats;
     private Map<Action, Texture> textures = new HashMap<>();
 
-    public float getX() { return x; }
-    public float getY() { return y; }
-    public Fighter(Constants.Side side, String folderPath) { // folderPath là "images/p1"
+    // Trạng thái logic
+    private Action currentState = Action.IDLE;
+    private float stateTimer = 0;
+    private final float ACTION_DURATION = 0.5f;
+
+    public Fighter(Constants.Side side, String folderPath) {
         this.side = side;
+        this.stats = new FighterStats();
         this.y = Constants.GROUND_Y;
+        this.x = (side == Constants.Side.LEFT) ?
+            Constants.APP_WIDTH * 0.25f - Constants.CHAR_SIZE / 2 :
+            Constants.APP_WIDTH * 0.75f - Constants.CHAR_SIZE / 2;
 
-        // [QUAN TRỌNG] Nạp toàn bộ ảnh vào Map để dùng
-        textures.put(Action.IDLE,  new Texture(folderPath + "/idle.png"));
-        textures.put(Action.PUNCH, new Texture(folderPath + "/punch.png"));
-        textures.put(Action.KICK,  new Texture(folderPath + "/kick.png"));
-        textures.put(Action.BLOCK, new Texture(folderPath + "/block.png"));
-        textures.put(Action.DUCK,  new Texture(folderPath + "/duck.png"));
-        textures.put(Action.SKILL, new Texture(folderPath + "/skill.png"));
+        loadTextures(folderPath);
+    }
 
-        // Biến texture mặc định dùng làm fallback
-        this.texture = textures.get(Action.IDLE);
+    private void loadTextures(String path) {
+        // Chỉ liệt kê những Action đã có ảnh chuẩn
+        Action[] supportedActions = {
+            Action.IDLE,
+            Action.PUNCH,
+            Action.KICK,
+            Action.BLOCK,
+            Action.DUCK,
+            Action.SKILL
+        };
 
-        if (side == Constants.Side.LEFT) {
-            this.x = Constants.APP_WIDTH * 0.25f - Constants.CHAR_SIZE / 2;
-        } else {
-            this.x = Constants.APP_WIDTH * 0.75f - Constants.CHAR_SIZE / 2;
+        for (Action action : supportedActions) {
+            String fileName = path + "/" + action.name().toLowerCase() + ".png";
+            textures.put(action, new Texture(fileName));
+        }
+
+    }
+
+    public void update(float delta) {
+        // Tự động hồi chiêu (Reset trạng thái tấn công)
+        if (isAttacking()) {
+            stateTimer += delta;
+            if (stateTimer >= ACTION_DURATION) {
+                resetToIdle();
+            }
+        }
+
+        // Auto-Skill logic
+        if (stats.mana >= Constants.MAX_MANA && currentState == Action.IDLE) {
+            performAction(Action.SKILL);
+            stats.mana = 0;
         }
     }
 
-    // --- LOGIC TRẠNG THÁI  ---
-    private Action currentState = Action.IDLE; // Mặc định là đứng yên
-    private float stateTimer = 0;              // Đếm thời gian trôi qua của một hành động
-    private final float ACTION_DURATION = 0.5f; // Mỗi cú đấm/đá kéo dài 0.5 giây
-    public int getHp() { return hp; }
-    public float getMana() { return mana; }
-    public void takeDamage(float damage, Action attackType) {
-        boolean canDefend = false;
-
-        // Logic khắc chế chuẩn
-        if (currentState == Action.BLOCK && attackType == Action.PUNCH) canDefend = true;
-        if (currentState == Action.DUCK && attackType == Action.KICK) canDefend = true;
-        if (attackType == Action.SKILL) canDefend = false;
-
-        if (!canDefend) {
-            this.hp = (int)Math.max(0, this.hp - damage);
-        }
-    }
-    private boolean hasHit = false; // Kiểm tra đòn đánh đã trúng chưa
-
-    public void recordHit() {
-        this.mana += 1f; // 10 đòn trúng mới nhận 1 mana
-        if (this.mana > Constants.MAX_MANA) this.mana = Constants.MAX_MANA;
-    }
-
-    public boolean hasHit() { return hasHit; }
-    public void setHit(boolean hit) { this.hasHit = hit; }
-
-
-    /**
-     * Hàm ra lệnh: Khi Controller nhấn phím, nó sẽ gọi hàm này.
-     */
-    // [SỬA] Hàm ra lệnh: Cho phép BLOCK/DUCK đè lên IDLE ngay lập tức và ngược lại
     public void performAction(Action action) {
-        // Nếu là các đòn đánh (Trigger)
+        // Nếu là hành động tấn công/di chuyển, chỉ cho phép khi đang đứng yên
         if (action == Action.PUNCH || action == Action.KICK || action == Action.SKILL) {
             if (this.currentState == Action.IDLE) {
                 this.currentState = action;
                 this.stateTimer = 0;
+                this.stats.hasHit = false; // Bắt đầu đòn mới, reset flag trúng đòn
             }
         } else {
-            // Nếu là trạng thái (States: BLOCK, DUCK, IDLE)
-            // Cho phép thay đổi bất cứ lúc nào (ví dụ đang BLOCK chuyển sang DUCK)
-            if (currentState == Action.IDLE || currentState == Action.BLOCK || currentState == Action.DUCK) {
-                this.currentState = action;
-            }
+            // Các trạng thái giữ phím (Block, Duck)
+            if (!isAttacking()) this.currentState = action;
         }
     }
 
-    /**
-     * Hàm cập nhật: Được gọi liên tục 60 FPS trong GameScreen.
-     */
-    public void update(float delta) {
-        // Tự động bật SKILL khi đủ 10 Mana
-        if (this.mana >= Constants.MAX_MANA && currentState == Action.IDLE) {
-            performAction(Action.SKILL);
-            this.mana = 0;
-        }
-
-        if (currentState == Action.PUNCH || currentState == Action.KICK || currentState == Action.SKILL) {
-            stateTimer += delta;
-            if (stateTimer >= ACTION_DURATION) {
-                currentState = Action.IDLE;
-                stateTimer = 0;
-                hasHit = false; // Reset để đòn đánh sau có thể gây sát thương
-            }
-        }
+    private void resetToIdle() {
+        this.currentState = Action.IDLE;
+        this.stateTimer = 0;
+        this.stats.hasHit = false;
     }
 
     public void draw(SpriteBatch batch) {
-        // Nếu là P2 (Bên PHẢI) thì lật ngang ảnh (flipX = true) để nhìn sang TRÁI
         boolean flipX = (side == Constants.Side.RIGHT);
-        Texture currentTexture = textures.get(currentState);
-        if (currentTexture == null) currentTexture = texture;
-        // Vẽ với kích thước chuẩn 200x200 từ Constants
-        batch.draw(currentTexture,
-            x, y,
-            Constants.CHAR_SIZE, Constants.CHAR_SIZE,
-            0, 0,
-            currentTexture.getWidth(), currentTexture.getHeight(),
-            flipX, false);
+        Texture currentTex = textures.get(currentState);
+        if (currentTex == null) currentTex = textures.get(Action.IDLE);
+
+        batch.draw(currentTex, x, y, Constants.CHAR_SIZE, Constants.CHAR_SIZE,
+            0, 0, currentTex.getWidth(), currentTex.getHeight(), flipX, false);
     }
+
+    // GETTERS & SETTERS
+    public boolean isAttacking() {
+        return currentState == Action.PUNCH || currentState == Action.KICK || currentState == Action.SKILL;
+    }
+    public Action getCurrentState() { return currentState; }
+    public FighterStats getStats() { return stats; }
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public int getHp() { return stats.hp; }
+    public float getMana() {return stats.mana; }
 
     public void dispose() {
-        if (texture != null) texture.dispose();
-        // [SỬA] Giải phóng toàn bộ bộ ảnh trong Map để tránh tràn RAM 16GB
-        for (Texture t : textures.values()) {
-            if (t != null) t.dispose();
-        }
-    }
-    // Getter để các hệ thống khác (như Collision) check trạng thái
-    public Action getCurrentState() {
-        return currentState;
+        for (Texture t : textures.values()) if (t != null) t.dispose();
     }
 }
-
-
