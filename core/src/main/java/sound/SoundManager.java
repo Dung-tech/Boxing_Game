@@ -1,54 +1,53 @@
 package sound;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import util.AssetManagerWrapper;
 
 public class SoundManager {
+    private Sound punch, kick, hit, glassBreak;
+    private Music bgMusic;
+    private AssetManagerWrapper wrapper;
 
-    private Music backgroundMusic;
-    private Sound punchSound;
-    private Sound hitSound;
-
+    // GIỮ TÊN HÀM load() để file Main.java không bị lỗi
     public void load() {
-        // Kiểm tra xem file có tồn tại không trước khi load (Tránh crash game)
-        if (Gdx.files.internal("sounds/bg_music.mp3").exists()) {
-            backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("sounds/bg_music.mp3"));
+        if (wrapper == null) {
+            wrapper = new AssetManagerWrapper();
+            wrapper.loadAssets();
         }
 
-        if (Gdx.files.internal("sounds/punch.mp3").exists()) {
-            punchSound = Gdx.audio.newSound(Gdx.files.internal("sounds/punch.mp3"));
-        }
-
-        if (Gdx.files.internal("sounds/hit.mp3").exists()) {
-            hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/hit.mp3"));
-        }
+        this.punch = wrapper.getAsset("sounds/punch.mp3", Sound.class);
+        this.kick = wrapper.getAsset("sounds/kick.mp3", Sound.class);
+        this.hit = wrapper.getAsset("sounds/hit.mp3", Sound.class);
+        this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
+        this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
     }
 
+    // GIỮ TÊN HÀM playMusic() để file GameScreen.java của bạn HẾT LỖI ĐỎ
     public void playMusic() {
-        if (backgroundMusic != null) {
-            backgroundMusic.setLooping(true);
-            backgroundMusic.setVolume(0.5f);
-            backgroundMusic.play();
+        if (bgMusic != null) {
+            bgMusic.setLooping(true);
+            bgMusic.play();
         }
     }
 
-    public void playPunch() {
-        if (punchSound != null) {
-            punchSound.play(1.0f);
-        }
+    // Hàm này dự phòng nếu có file khác gọi tên dài hơn
+    public void playBackgroundMusic() {
+        playMusic();
     }
 
-    public void playHit() {
-        if (hitSound != null) {
-            hitSound.play(1.0f);
+    public void playPunch() { if (punch != null) punch.play(); }
+    public void playKick() { if (kick != null) kick.play(); }
+    public void playHit() { if (hit != null) hit.play(); }
+    public void playGlassBreak() { if (glassBreak != null) glassBreak.play(); }
+
+    public void stopBackgroundMusic() {
+        if (bgMusic != null && bgMusic.isPlaying()) {
+            bgMusic.stop();
         }
     }
 
     public void dispose() {
-        // Giải phóng bộ nhớ an toàn
-        if (backgroundMusic != null) backgroundMusic.dispose();
-        if (punchSound != null) punchSound.dispose();
-        if (hitSound != null) hitSound.dispose();
+        if (wrapper != null) wrapper.dispose();
     }
 }

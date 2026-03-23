@@ -1,23 +1,33 @@
 package util;
 
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 
 public class AssetManagerWrapper {
-    private static AssetManager manager = new AssetManager();
+    private AssetManager manager = new AssetManager();
 
-    public static void loadAll() {
-        // Dev 5 và Dev 4 sẽ vào đây thêm đường dẫn file khi có hàng xịn
-        // manager.load(Constants.SFX_PUNCH, Sound.class);
-        // manager.load(Constants.TEXTURE_ATLAS, TextureAtlas.class);
+    public void loadAssets() {
+        // Nạp các file hiệu ứng
+        manager.load("sounds/punch.mp3", Sound.class);
+        manager.load("sounds/hit.mp3", Sound.class);
+        manager.load("sounds/kick.mp3", Sound.class);
+        manager.load("sounds/glass_break.mp3", Sound.class);
+
+        // GIỮ NGUYÊN TÊN FILE NHẠC NỀN CỦA BẠN
+        manager.load("sounds/bg_music.mp3", Music.class);
+
+        manager.finishLoading();
     }
 
-    public static <T> T get(String fileName, Class<T> type) {
-        return manager.get(fileName, type);
+    public <T> T getAsset(String fileName, Class<T> type) {
+        if (manager.isLoaded(fileName)) {
+            return manager.get(fileName, type);
+        }
+        return null;
     }
 
-    public static void dispose() {
+    public void dispose() {
         manager.dispose();
     }
-
-    public static boolean update() { return manager.update(); }
 }
