@@ -31,6 +31,10 @@ public abstract class FighterController {
         } else if (input.block()) {
             fighter.performAction(Action.BLOCK);
         }
+        else {
+            // [THÊM] Khi không bấm gì, trả nhân vật về IDLE (để thoát trạng thái BLOCK/DUCK)
+            fighter.performAction(Action.IDLE);
+        }
 
         // 3. Reset trạng thái input để tránh việc bấm 1 lần mà đấm mãi mãi
         input.reset();
