@@ -101,8 +101,8 @@ public class GameScreen extends ScreenAdapter {
             com.badlogic.gdx.Input.Keys.J,
             com.badlogic.gdx.Input.Keys.K,
             com.badlogic.gdx.Input.Keys.S,
-            com.badlogic.gdx.Input.Keys.B,
-            com.badlogic.gdx.Input.Keys.L
+            com.badlogic.gdx.Input.Keys.W,
+            com.badlogic.gdx.Input.Keys.SPACE
         );
 
         // Truyền soundManager từ Main vào Controller
@@ -113,7 +113,7 @@ public class GameScreen extends ScreenAdapter {
             com.badlogic.gdx.Input.Keys.NUMPAD_1,
             com.badlogic.gdx.Input.Keys.NUMPAD_2,
             com.badlogic.gdx.Input.Keys.DOWN,
-            com.badlogic.gdx.Input.Keys.NUMPAD_0,
+            com.badlogic.gdx.Input.Keys.UP,
             com.badlogic.gdx.Input.Keys.ENTER
         );
         p2Controller = new P2Controller(p2, p2Input);

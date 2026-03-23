@@ -5,12 +5,18 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import util.Constants;
 import util.Constants.Action;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Fighter {
     private int hp = Constants.MAX_HP;
     private float mana = 0;
     private Constants.Side side;
     private Texture texture;
     private float x, y;
+    private Map<Action, Texture> textures = new HashMap<>();
+
+
 
     // --- LOGIC TRẠNG THÁI (MỚI) ---
     private Action currentState = Action.IDLE; // Mặc định là đứng yên
@@ -23,7 +29,7 @@ public class Fighter {
     private boolean hasHit = false; // Kiểm tra đòn đánh đã trúng chưa
 
     public void recordHit() {
-        this.mana += 0.1f; // 10 đòn trúng mới nhận 1 mana
+        this.mana += 1f; // 10 đòn trúng mới nhận 1 mana
         if (this.mana > Constants.MAX_MANA) this.mana = Constants.MAX_MANA;
     }
 
@@ -45,11 +51,20 @@ public class Fighter {
     /**
      * Hàm ra lệnh: Khi Controller nhấn phím, nó sẽ gọi hàm này.
      */
+    // [SỬA] Hàm ra lệnh: Cho phép BLOCK/DUCK đè lên IDLE ngay lập tức và ngược lại
     public void performAction(Action action) {
-        // Chỉ thực hiện hành động mới nếu đang đứng yên (tránh spam phím)
-        if (this.currentState == Action.IDLE) {
-            this.currentState = action;
-            this.stateTimer = 0;
+        // Nếu là các đòn đánh (Trigger)
+        if (action == Action.PUNCH || action == Action.KICK || action == Action.SKILL) {
+            if (this.currentState == Action.IDLE) {
+                this.currentState = action;
+                this.stateTimer = 0;
+            }
+        } else {
+            // Nếu là trạng thái (States: BLOCK, DUCK, IDLE)
+            // Cho phép thay đổi bất cứ lúc nào (ví dụ đang BLOCK chuyển sang DUCK)
+            if (currentState == Action.IDLE || currentState == Action.BLOCK || currentState == Action.DUCK) {
+                this.currentState = action;
+            }
         }
     }
 
@@ -63,7 +78,7 @@ public class Fighter {
             this.mana = 0;
         }
 
-        if (currentState != Action.IDLE) {
+        if (currentState == Action.PUNCH || currentState == Action.KICK || currentState == Action.SKILL) {
             stateTimer += delta;
             if (stateTimer >= ACTION_DURATION) {
                 currentState = Action.IDLE;
