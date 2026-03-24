@@ -42,6 +42,11 @@ public final class Constants {
         HIT,        // Bị dính đòn (Trạng thái thụ động)
         DEAD        // Thua
     }
+    public enum ControlMode {
+        KEYBOARD,
+        CAMERA_AI
+    }
+
     // Thêm vào Constants.java
     public enum Side { LEFT, RIGHT }
     public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }

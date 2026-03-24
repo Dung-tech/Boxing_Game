@@ -24,5 +24,11 @@ public class KeyboardInput implements InputController {
     @Override public boolean duck() { return isD; }
     @Override public boolean block() { return isB; }
     @Override public boolean skill() { return isS; }
+
+    @Override
+    public String getNextAction() {
+        return "";
+    }
+
     @Override public void reset() { isP = isK = isS = false; }
 }

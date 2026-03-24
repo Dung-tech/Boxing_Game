@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import controller.P1Controller;
 import controller.P2Controller;
 import effect.EffectManager;
+import input.GestureReceiver;
 import input.KeyboardInput;
 import main.Main;
 import entity.Fighter;
@@ -23,16 +24,18 @@ public class GameScreen extends ScreenAdapter {
     private EffectManager effectManager;
     private P1Controller p1Controller;
     private P2Controller p2Controller;
+    private String controlMode;
 
-    public GameScreen(Main game) {
+    public GameScreen(Main game, String mode) {
         this.game = game;
+        this.controlMode = mode;
         background = new Texture("images/background/background.jpg");
         effectManager = new EffectManager();
         effectManager.load();
         hud = new GameHUD();
         combatSystem = new CombatSystem(effectManager, game.soundManager);
-        p1 = new Fighter(Constants.Side.LEFT, "images/p1");
-        p2 = new Fighter(Constants.Side.RIGHT, "images/p2");
+        p1 = new Fighter(Constants.Side.LEFT, "images/p1",mode);
+        p2 = new Fighter(Constants.Side.RIGHT, "images/p2", mode);
     }
 
     @Override
@@ -53,6 +56,7 @@ public class GameScreen extends ScreenAdapter {
     }
     @Override
     public void show() {
+        GestureReceiver.getInstance().start();
         game.soundManager.playMusic();
         KeyboardInput p1Input = new KeyboardInput(
             com.badlogic.gdx.Input.Keys.D,

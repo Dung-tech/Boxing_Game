@@ -1,46 +1,60 @@
 import cv2
 import mediapipe as mp
 
+# Khởi tạo các công cụ của MediaPipe một lần duy nhất ở cấp độ module
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+
 class HandDetector:
     def __init__(self):
-        self.mp_hands = mp.solutions.hands
-        self.mp_draw = mp.solutions.drawing_utils # Công cụ vẽ
-        self.hands = self.mp_hands.Hands(
+        # max_num_hands=2 để AI quét cả 2 vùng màn hình
+        self.hands = mp_hands.Hands(
             static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.8, # Tăng lên 0.8 để bắt nét hơn
-            min_tracking_confidence=0.8
+            max_num_hands=2,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.7
         )
 
-    def find_hands(self, frame, draw=True):
+    def count_fingers(self, frame):
+        # Reset kết quả là -1 (No Hand) mỗi frame
+        results_dict = {"P1": -1, "P2": -1}
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        self.results = self.hands.process(img_rgb)
+        results = self.hands.process(img_rgb)
 
-        if self.results.multi_hand_landmarks:
-            for hand_lms in self.results.multi_hand_landmarks:
-                if draw:
-                    # Vẽ các điểm mốc và đường nối (khung xương)
-                    self.mp_draw.draw_landmarks(
-                        frame, hand_lms, self.mp_hands.HAND_CONNECTIONS,
-                        self.mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),
-                        self.mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2)
-                    )
-        return frame
+        if results.multi_hand_landmarks:
+            for hand_lms in results.multi_hand_landmarks:
+                # Lấy tọa độ x của cổ tay (Landmark 0) để phân loại P1/P2
+                wrist_x = hand_lms.landmark[0].x
 
-    def count_fingers(self):
-        if not self.results.multi_hand_landmarks:
-            return -1
+                # PHÂN LOẠI P1/P2 (Fix lỗi ghi đè dữ liệu)
+                # Dựa trên vạch kẻ giữa màn hình (0.5)
+                target_player = "NONE"
+                if wrist_x < 0.5:
+                    target_player = "P1" # Bên trái màn hình
+                else:
+                    target_player = "P2" # Bên phải màn hình
 
-        hand_lms = self.results.multi_hand_landmarks[0]
-        finger_tips = [8, 12, 16, 20]
-        count = 0
+                # Nếu slot người chơi đó đã có tay rồi, thì bỏ qua tay này
+                # Cách này giúp khóa đúng 2 tay ở 2 vùng riêng biệt
+                if results_dict[target_player] != -1:
+                    continue
 
-        # Kiểm tra ngón cái (Thumb) - Logic này chuẩn cho tay phải hướng vào cam
-        if hand_lms.landmark[4].x < hand_lms.landmark[3].x:
-            count += 1
+                # Vẽ xương bàn tay cho người chơi được nhận diện
+                mp_drawing.draw_landmarks(frame, hand_lms, mp_hands.HAND_CONNECTIONS)
 
-        # 4 ngón còn lại
-        for tip in finger_tips:
-            if hand_lms.landmark[tip].y < hand_lms.landmark[tip - 2].y:
-                count += 1
-        return count
+                # Logic đếm ngón tay chuẩn: Tip cao hơn PIP (khớp giữa)
+                count = 0
+                # Ngón cái (Landmark 4)
+                if hand_lms.landmark[4].x < hand_lms.landmark[3].x:
+                    count += 1
+
+                # 4 ngón còn lại: Chỉ đếm là MỞ khi đầu ngón (Tip) cao hơn khớp giữa (PIP)
+                finger_tips = [8, 12, 16, 20]
+                for tip in finger_tips:
+                    # y càng nhỏ càng cao
+                    if hand_lms.landmark[tip].y < hand_lms.landmark[tip - 2].y:
+                        count += 1
+
+                results_dict[target_player] = count
+
+        return results_dict

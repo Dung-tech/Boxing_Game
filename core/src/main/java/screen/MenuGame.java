@@ -18,6 +18,10 @@ public class MenuGame extends ScreenAdapter {
     private BitmapFont font;
     private GlyphLayout layout;
     private ShapeRenderer shapeRenderer;
+    private boolean isFightOptionsVisible = false; // Trạng thái hiện bảng chọn Mode
+    private String[] fightOptions = {"KEYBOARD", "CAMERA AI"}; // 2 Option của ông giáo
+    private int fightSelected = 0; // Biến chọn riêng cho bảng này
+
 
     // 4 mục menu theo yêu cầu của bạn
     private String[] menuItems = {"FIGHT", "MANUAL", "SETTINGS", "QUIT GAME"};
@@ -58,16 +62,37 @@ public class MenuGame extends ScreenAdapter {
         } else if (isSettingsVisible) {
             drawSettingsOverlay();
         }
+        else if (isFightOptionsVisible) drawFightOptionsOverlay();
     }
 
     private void handleInput() {
         // Nếu đang hiện Manual hoặc Settings, nhấn ESC để quay lại
-        if (isManualVisible || isSettingsVisible) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.BACKSPACE)) {
-                isManualVisible = false;
-                isSettingsVisible = false;
+        if (isManualVisible || isSettingsVisible || isFightOptionsVisible) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                isManualVisible = isSettingsVisible = isFightOptionsVisible = false;
+                return;
             }
-            return; // Khóa các phím điều khiển menu chính khi đang hiện overlay
+
+            // Điều khiển trong bảng chọn Mode
+            if (isFightOptionsVisible) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+                    fightSelected = 0;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+                    fightSelected = 1;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                    if (fightSelected == 1) {
+                        startPythonAI();
+                        // [BẬT AI] Kích hoạt Socket trước khi vào game
+                        input.GestureReceiver.getInstance().start();
+                        game.setScreen(new GameScreen(game, "CAMERA_AI"));
+                    } else {
+                        game.setScreen(new GameScreen(game, "KEYBOARD"));
+                    }
+                }
+            }
+            return;
         }
 
         // Điều khiển lên xuống
@@ -82,7 +107,7 @@ public class MenuGame extends ScreenAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (selected) {
                 case 0: // FIGHT
-                    game.setScreen(new GameScreen(game));
+                    isFightOptionsVisible = true;
                     break;
                 case 1: // MANUAL
                     isManualVisible = true;
@@ -95,6 +120,25 @@ public class MenuGame extends ScreenAdapter {
                     break;
             }
         }
+    }
+    private void drawFightOptionsOverlay() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.85f);
+        shapeRenderer.rect(Constants.APP_WIDTH/2f - 200, 250, 400, 250); // Khung bảng chọn
+
+        // Highlight mục được chọn trong bảng Mode
+        shapeRenderer.setColor(Color.FIREBRICK);
+        float highlightY = (fightSelected == 0) ? 380 : 310;
+        shapeRenderer.rect(Constants.APP_WIDTH/2f - 180, highlightY, 360, 50);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        drawCenter(game.batch, "SELECT CONTROL MODE", Constants.APP_WIDTH, 470, Color.GOLD);
+        drawCenter(game.batch, "KEYBOARD (Classic)", Constants.APP_WIDTH, 415, Color.WHITE);
+        drawCenter(game.batch, "CAMERA AI (Motion)", Constants.APP_WIDTH, 345, Color.WHITE);
+        drawCenter(game.batch, "Press ESC to Cancel", Constants.APP_WIDTH, 230, Color.GRAY);
+        game.batch.end();
     }
 
     private void drawMenuUI() {
@@ -166,6 +210,35 @@ public class MenuGame extends ScreenAdapter {
         float x = (width - layout.width) / 2;
         font.draw(batch, text, x, y);
     }
+    private void startPythonAI() {
+        Thread pythonThread = new Thread(() -> {
+            try {
+                // Đường dẫn đến file python trong môi trường ảo của ông giáo
+                String pythonExe = "D:/Boxing_Game/.venv/Scripts/python.exe";
+                // Đường dẫn đến file script chính
+                String scriptPath = "D:/Boxing_Game/python_controller/main.py";
+
+                ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath);
+                // Thiết lập thư mục làm việc để Python tìm đúng các file import (hand_detector,...)
+                pb.directory(new java.io.File("D:/Boxing_Game/python_controller"));
+
+                Process process = pb.start();
+                System.out.println("[System] Da tu dong kick-start Python AI!");
+
+                // (Tùy chọn) Đọc log từ Python nếu ông giáo muốn debug ngay trong Console của Java
+            /*
+            java.util.Scanner s = new java.util.Scanner(process.getInputStream());
+            while (s.hasNextLine()) System.out.println("Python: " + s.nextLine());
+            */
+
+            } catch (Exception e) {
+                System.err.println("[Lỗi System] Khong the tu dong bat Python: " + e.getMessage());
+            }
+        });
+        pythonThread.setDaemon(true);
+        pythonThread.start();
+    }
+
 
     @Override
     public void dispose() {

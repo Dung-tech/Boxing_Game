@@ -11,10 +11,10 @@ public interface InputController {
     boolean block();
 
     boolean skill();
-
     /**
      * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
      */
+    String getNextAction();
     void update(float delta);
 
     /**

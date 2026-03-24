@@ -1,43 +1,36 @@
 class GestureRecognizer:
     def __init__(self):
-        self.last_stable_action = "IDLE"
+        self.ready_for_next = True
         self.finger_history = []
-        self.required_frames = 2 # Độ trễ cực thấp cho máy 16GB RAM
+        self.required_frames = 2
 
     def recognize(self, finger_count):
-        # 1. Bộ lọc làm mượt
+        if finger_count == -1: return "IDLE" # Không thấy tay thì về IDLE
+
         self.finger_history.append(finger_count)
         if len(self.finger_history) > self.required_frames:
             self.finger_history.pop(0)
 
-        # 2. Kiểm tra tính ổn định
         if len(self.finger_history) == self.required_frames and len(set(self.finger_history)) == 1:
             stable_count = self.finger_history[0]
 
-            # Map số ngón sang tên hành động
-            current_action = "IDLE"
-            if stable_count == 1: current_action = "PUNCH"
-            elif stable_count == 2: current_action = "KICK"
-            elif stable_count == 3: current_action = "BLOCK"
-            elif stable_count == 4: current_action = "DUCK"
-            elif stable_count == 5: current_action = "SKILL"
-            elif stable_count <= 0: current_action = "IDLE"
+            # --- NHÓM TRẠNG THÁI (Gửi liên tục) ---
+            if stable_count == 0:
+                self.ready_for_next = True # Reset để chuẩn bị đấm phát tiếp theo
+                return "IDLE"
+            if stable_count == 3: return "BLOCK"
+            if stable_count == 4: return "DUCK"
 
-            # 3. Logic phân loại Tín hiệu vs Trạng thái
-            triggers = ["PUNCH", "KICK", "SKILL"]
-            states = ["BLOCK", "DUCK", "IDLE"]
+            # --- NHÓM CHIÊU THỨC (Chỉ gửi 1 lần duy nhất) ---
+            if self.ready_for_next:
+                if stable_count == 1:
+                    self.ready_for_next = False
+                    return "PUNCH"
+                if stable_count == 2:
+                    self.ready_for_next = False
+                    return "KICK"
+                if stable_count == 5:
+                    self.ready_for_next = False
+                    return "SKILL"
 
-            # Nếu là HÀNH ĐỘNG (Trigger): Chỉ gửi khi nó KHÁC với hành động trước đó
-            if current_action in triggers:
-                if current_action != self.last_stable_action:
-                    self.last_stable_action = current_action
-                    return current_action
-                else:
-                    return "IDLE" # Đã gửi rồi thì trả về IDLE để tránh spam đấm
-
-            # Nếu là TRẠNG THÁI (State): Gửi liên tục
-            if current_action in states:
-                self.last_stable_action = current_action
-                return current_action
-
-        return "IDLE"
+        return "NONE" # Không có thay đổi gì đặc biệt
