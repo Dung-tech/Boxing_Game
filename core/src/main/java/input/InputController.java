@@ -1,25 +1,13 @@
 package input;
 
+/**
+ * Interface chung cho mọi loại thiết bị đầu vào.
+ * Giúp Controller không cần quan tâm dữ liệu đến từ đâu (AI hay Bàn phím).
+ */
 public interface InputController {
-
-    boolean kick();
-
-    boolean duck();  //cúi xuống
-
-    boolean punch();
-
-    boolean block();
-
-    boolean skill();
-
     /**
-     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
+     * Trả về hành động hiện tại nhận được từ thiết bị.
+     * @return String tên hành động (PUNCH, KICK, BLOCK, NONE...)
      */
-    void update(float delta);
-
-    /**
-     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
-     */
-    void reset();
-
+    String getNextAction();
 }
