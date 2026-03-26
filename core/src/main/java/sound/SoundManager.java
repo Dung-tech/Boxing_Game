@@ -6,7 +6,7 @@ import util.AssetManagerWrapper;
 
 public class SoundManager {
     private Sound punch, kick, hit, glassBreak;
-    private Music bgMusic;
+    private Music bgMusic, menuMusic;
     private AssetManagerWrapper wrapper;
 
     // GIỮ TÊN HÀM load() để file Main.java không bị lỗi
@@ -21,6 +21,7 @@ public class SoundManager {
         this.hit = wrapper.getAsset("sounds/hit.mp3", Sound.class);
         this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
         this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
+        this.menuMusic = wrapper.getAsset("sounds/menu_music.mp3", Music.class);
     }
 
     // GIỮ TÊN HÀM playMusic() để file GameScreen.java của bạn HẾT LỖI ĐỎ
@@ -28,6 +29,20 @@ public class SoundManager {
         if (bgMusic != null) {
             bgMusic.setLooping(true);
             bgMusic.play();
+        }
+    }
+
+    public void playMenuMusic() {
+        if (menuMusic != null) {
+            menuMusic.setLooping(true);
+            menuMusic.setVolume(0.5f);
+            menuMusic.play();
+        }
+    }
+
+    public void stopMenuMusic() {
+        if (menuMusic != null && menuMusic.isPlaying()) {
+            menuMusic.stop();
         }
     }
 

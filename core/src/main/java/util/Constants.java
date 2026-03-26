@@ -16,7 +16,7 @@ public final class Constants {
     public static final int   MAX_HP            = 30;    // Đấm 20 phát là đi
     public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
     public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
-    public static final float CHAR_SIZE         = 200f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
+    public static final float CHAR_SIZE         = 380f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
 
     // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
     public static final float DAMAGE_PUNCH      = 1f;
@@ -58,4 +58,6 @@ public final class Constants {
     public static final String SFX_KICK      = "sounds/sfx/kick.wav";
     public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
     public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
+    public static final int   TOTAL_ROUNDS      = 3;
+    public static final int   WIN_POINTS        = 1;
 }

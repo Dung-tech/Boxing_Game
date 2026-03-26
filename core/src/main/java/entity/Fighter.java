@@ -8,6 +8,7 @@ import util.Constants;
 import util.Constants.Action;
 import java.util.HashMap;
 import java.util.Map;
+import static util.Constants.Action.*;
 
 public class Fighter {
     private String controlMode;
@@ -15,6 +16,7 @@ public class Fighter {
     private Constants.Side side;
     private FighterStats stats;
     private Map<Action, Texture> textures = new HashMap<>();
+    private boolean isDead = false;
 
     // Trạng thái logic
     private Action currentState = Action.IDLE;
@@ -27,8 +29,8 @@ public class Fighter {
         this.stats = new FighterStats();
         this.y = Constants.GROUND_Y;
         this.x = (side == Constants.Side.LEFT) ?
-            Constants.APP_WIDTH * 0.25f - Constants.CHAR_SIZE / 2 :
-            Constants.APP_WIDTH * 0.75f - Constants.CHAR_SIZE / 2;
+            Constants.APP_WIDTH * 0.38f - Constants.CHAR_SIZE / 2 :
+            Constants.APP_WIDTH * 0.53f - Constants.CHAR_SIZE / 2;
 
         loadTextures(folderPath);
     }
@@ -140,6 +142,28 @@ public class Fighter {
     public float getY() { return y; }
     public int getHp() { return stats.hp; }
     public float getMana() {return stats.mana; }
+
+    public void takeDamage(float damage) {
+        stats.hp -= (int) damage;
+        if (stats.hp <= 0) {
+            stats.hp = 0;
+            isDead = true;
+            currentState = HIT;
+        } else {
+            currentState = HIT;
+        }
+    }
+
+    public boolean isDead() {
+        return isDead || stats.hp <= 0;
+    }
+
+    public void reset() {
+        stats.hp = Constants.MAX_HP;
+        stats.mana = Constants.MAX_MANA;
+        isDead = false;
+        resetToIdle();
+    }
 
     public void dispose() {
         for (Texture t : textures.values()) if (t != null) t.dispose();

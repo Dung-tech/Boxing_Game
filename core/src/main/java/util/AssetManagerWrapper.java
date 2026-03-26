@@ -16,6 +16,7 @@ public class AssetManagerWrapper {
 
         // GIỮ NGUYÊN TÊN FILE NHẠC NỀN CỦA BẠN
         manager.load("sounds/bg_music.mp3", Music.class);
+        manager.load("sounds/menu_music.mp3", Music.class);
 
         manager.finishLoading();
     }

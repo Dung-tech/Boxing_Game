@@ -14,6 +14,8 @@ import entity.Fighter;
 import system.CombatSystem;
 import ui.GameHUD;
 import util.Constants;
+import system.GameStateManager;
+import system.RoundSystem;
 
 public class GameScreen extends ScreenAdapter {
     private CombatSystem combatSystem;
@@ -26,6 +28,9 @@ public class GameScreen extends ScreenAdapter {
     private P2Controller p2Controller;
     private String controlMode;
 
+    private RoundSystem roundSystem;
+    private GameStateManager gameStateManager;
+
     public GameScreen(Main game, String mode) {
         this.game = game;
         this.controlMode = mode;
@@ -36,6 +41,8 @@ public class GameScreen extends ScreenAdapter {
         combatSystem = new CombatSystem(effectManager, game.soundManager);
         p1 = new Fighter(Constants.Side.LEFT, "images/p1",mode);
         p2 = new Fighter(Constants.Side.RIGHT, "images/p2", mode);
+        roundSystem = new RoundSystem();
+        gameStateManager = new GameStateManager(game,mode);
     }
 
     @Override
@@ -45,6 +52,8 @@ public class GameScreen extends ScreenAdapter {
         p1.update(delta);
         p2.update(delta);
         combatSystem.update(p1, p2);
+        roundSystem.update(delta, p1, p2);
+        gameStateManager.update(p1, p2, roundSystem);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.batch.begin();
         game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);

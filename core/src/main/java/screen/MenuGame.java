@@ -41,6 +41,13 @@ public class MenuGame extends ScreenAdapter {
     }
 
     @Override
+    public void show() {
+        if(game.soundManager != null){
+            game.soundManager.playMenuMusic();
+        }
+    }
+
+    @Override
     public void render(float delta) {
         // 1. XỬ LÝ LOGIC ĐIỀU KHIỂN
         handleInput();
