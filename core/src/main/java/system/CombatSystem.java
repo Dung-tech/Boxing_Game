@@ -41,13 +41,18 @@ public class CombatSystem {
         }
     }
 
-    private void applyDamage(Fighter attacker, Fighter target, float damage, Action type) {
-        target.getStats().takeDamage(damage);
-        attacker.getStats().hasHit = true; // Chốt chặn: Một lần ra đòn chỉ trúng 1 lần
+    private void applyDamage(Fighter attacker, Fighter target, float damage, Action attackType) {
+        // Gọi takeDamage trên Fighter (đã có logic né đòn bên trong)
+        target.takeDamage(damage, attackType);
 
-        if (type != Action.SKILL) attacker.getStats().addMana(1f);
+        attacker.getStats().hasHit = true;
 
-        // Kích hoạt hiệu ứng hình ảnh/âm thanh
+        // Hồi mana cho người tấn công (trừ skill)
+        if (attackType != Action.SKILL) {
+            attacker.getStats().addMana(Constants.MANA_GAIN_PER_HIT);
+        }
+
+        // Hiệu ứng + âm thanh
         effectManager.spawnHitEffect(target.getX() + 100, target.getY() + 100);
         soundManager.playHit();
     }
