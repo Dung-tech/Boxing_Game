@@ -1,27 +1,81 @@
 import cv2
 import socket
+import sys
+import time
 from hand_detector import HandDetector
 from gesture_recognizer import GestureRecognizer
+from pose_detector import PoseDetector
+from pose_gesture_recognizer import PoseGestureRecognizer
+
+STATE_ACTIONS = {"IDLE", "BLOCK", "DUCK"}
+STATE_RESEND_INTERVAL = 0.08  # ~12.5 Hz
+NONE_TO_IDLE_TIMEOUT = 0.30
+DEBUG_SEND = False
+
+
+def send_action(conn, player_tag, action, cache):
+    now = time.monotonic()
+    last_action = cache[player_tag]["action"]
+    last_time = cache[player_tag]["time"]
+
+    # Burst gestures must always pass through; posture states are sent only on change/throttled.
+    if action in STATE_ACTIONS and action == last_action and (now - last_time) < STATE_RESEND_INTERVAL:
+        return True
+
+    msg = f"{player_tag}:{action}\n"
+    try:
+        conn.sendall(msg.encode("utf-8"))
+    except (socket.timeout, BlockingIOError):
+        # Under burst movement, drop stale frame command and keep loop running.
+        return True
+    except (BrokenPipeError, ConnectionResetError, OSError):
+        return False
+
+    cache[player_tag]["action"] = action
+    cache[player_tag]["time"] = now
+
+    if DEBUG_SEND:
+        print(f"SENDING: {msg.strip()}")
+
+    return True
 
 def main():
+    mode = "CAMERA_AI"
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].strip().upper()
+
     # 1. --- SETUP SOCKET ---
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Cho phép chạy lại server ngay lập tức nếu bị crash (tránh lỗi Address already in use)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(('127.0.0.1', 5000))
+    server_socket.bind(('127.0.0.1',65432))
     server_socket.listen(1)
 
     print("Python: [WAITING] Dang doi Java ket noi...")
     conn, addr = server_socket.accept()
+    conn.settimeout(0.03)
     print(f"Python: [CONNECTED] Da ket noi voi Java tai {addr}")
 
     # 2. --- KHOI TAO CAMERA & AI ---
     cap = cv2.VideoCapture(0)
-    detector = HandDetector()
+    detector = None
+    recognizer_p1 = None
+    recognizer_p2 = None
 
-    # Tao 2 thuc the rieng biet de khong bi lan lon lich su ngon tay cua 2 nguoi
-    recognizer_p1 = GestureRecognizer()
-    recognizer_p2 = GestureRecognizer()
+    if mode == "CAMERA_POSE":
+        detector = PoseDetector()
+        recognizer_p1 = PoseGestureRecognizer()
+        recognizer_p2 = PoseGestureRecognizer()
+    else:
+        detector = HandDetector()
+        # Tao 2 thuc the rieng biet de khong bi lan lon lich su ngon tay cua 2 nguoi
+        recognizer_p1 = GestureRecognizer()
+        recognizer_p2 = GestureRecognizer()
+    send_cache = {
+        "P1": {"action": None, "time": 0.0},
+        "P2": {"action": None, "time": 0.0}
+    }
+    last_non_none_time = {"P1": time.monotonic(), "P2": time.monotonic()}
 
     try:
         while True:
@@ -32,25 +86,39 @@ def main():
             frame = cv2.flip(frame, 1)
             h, w, _ = frame.shape
 
-            # 3. --- NHAN DIEN TAY ---
-            # results se la dict: {"P1": count, "P2": count}
-            results = detector.count_fingers(frame)
+            # 3. --- NHAN DIEN ---
+            if mode == "CAMERA_POSE":
+                pose_results = detector.detect(frame)
+                gesture_p1 = recognizer_p1.recognize(pose_results["P1"])
+                gesture_p2 = recognizer_p2.recognize(pose_results["P2"])
+            else:
+                # results se la dict: {"P1": count, "P2": count}
+                results = detector.count_fingers(frame)
+                gesture_p1 = recognizer_p1.recognize(results["P1"])
+                gesture_p2 = recognizer_p2.recognize(results["P2"])
+
+            now = time.monotonic()
+            if gesture_p1 != "NONE":
+                last_non_none_time["P1"] = now
+            elif now - last_non_none_time["P1"] > NONE_TO_IDLE_TIMEOUT:
+                gesture_p1 = "IDLE"
+
+            if gesture_p2 != "NONE":
+                last_non_none_time["P2"] = now
+            elif now - last_non_none_time["P2"] > NONE_TO_IDLE_TIMEOUT:
+                gesture_p2 = "IDLE"
 
             # --- XU LY PLAYER 1 (Ben trai) ---
-            gesture_p1 = recognizer_p1.recognize(results["P1"])
             if gesture_p1 != "NONE":
-                msg = f"P1:{gesture_p1}\n"
-                conn.sendall(msg.encode('utf-8'))
-                print(f"SENDING: {msg.strip()}")
+                if not send_action(conn, "P1", gesture_p1, send_cache):
+                    break
                 cv2.putText(frame, f"P1: {gesture_p1}", (50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
             # --- XU LY PLAYER 2 (Ben phai) ---
-            gesture_p2 = recognizer_p2.recognize(results["P2"])
             if gesture_p2 != "NONE":
-                msg = f"P2:{gesture_p2}\n"
-                conn.sendall(msg.encode('utf-8'))
-                print(f"SENDING: {msg.strip()}")
+                if not send_action(conn, "P2", gesture_p2, send_cache):
+                    break
                 cv2.putText(frame, f"P2: {gesture_p2}", (w//2 + 50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
@@ -60,11 +128,14 @@ def main():
             cv2.putText(frame, "P1 AREA", (w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             cv2.putText(frame, "P2 AREA", (3*w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
+            cv2.putText(frame, f"MODE: {mode}", (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
             cv2.imshow("Boxing AI - 2 Players Mode", frame)
 
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+    except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
+        print(f"Loi ket noi socket: {e}")
     except Exception as e:
         print(f"Loi: {e}")
     finally:

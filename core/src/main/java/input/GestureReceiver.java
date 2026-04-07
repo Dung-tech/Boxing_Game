@@ -3,6 +3,7 @@ package input;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.net.Socket;
 
 public class GestureReceiver implements InputController, Runnable {
@@ -16,7 +17,7 @@ public class GestureReceiver implements InputController, Runnable {
     private Thread thread;
 
     private final String HOST = "127.0.0.1";
-    private final int PORT = 5000;
+    private final int PORT = 65432;
 
     private GestureReceiver() {}
 
@@ -44,6 +45,7 @@ public class GestureReceiver implements InputController, Runnable {
         while (running) {
             try (Socket socket = new Socket()) {
                 socket.connect(new InetSocketAddress(HOST, PORT), 2000);
+                socket.setSoTimeout(3000);
                 System.out.println("[GestureReceiver] DA KET NOI VOI AI SERVER!");
 
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -53,7 +55,10 @@ public class GestureReceiver implements InputController, Runnable {
                     // line se co dang "P1:PUNCH" hoac "P2:KICK"
                     processIncomingData(line.trim().toUpperCase());
                 }
+            } catch (SocketTimeoutException e) {
+                // No line arrived in timeout window; keep waiting on same connection.
             } catch (Exception e) {
+                System.err.println("[GestureReceiver] Mat ket noi AI, thu ket noi lai: " + e.getClass().getSimpleName());
                 try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
             }
         }

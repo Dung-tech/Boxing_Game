@@ -71,7 +71,7 @@ public class Fighter {
         // Input handling
         String actionStr = "NONE";
 
-        if ("CAMERA_AI".equals(this.controlMode)) {
+        if ("CAMERA_AI".equals(this.controlMode) || "CAMERA_POSE".equals(this.controlMode)) {
             int playerId = (side == Constants.Side.LEFT) ? 1 : 2;
             actionStr = GestureReceiver.getInstance().getActionForPlayer(playerId);
         } else {
@@ -99,11 +99,6 @@ public class Fighter {
             }
         }
 
-        // Auto Skill
-        if (stats.mana >= Constants.MAX_MANA && currentState == IDLE) {
-            performAction(SKILL);
-            stats.mana = 0;
-        }
     }
     public void performAction(Action action) {
         // Không cho phép thay đổi trạng thái khi đang HIT
@@ -111,7 +106,18 @@ public class Fighter {
             return;
         }
 
-        if (action == PUNCH || action == KICK || action == SKILL) {
+        if (action == SKILL) {
+            if (stats.mana < Constants.MANA_COST_SKILL) {
+                return;
+            }
+
+            if (this.currentState == IDLE) {
+                this.currentState = action;
+                this.stateTimer = 0;
+                this.stats.hasHit = false;
+                this.stats.mana = 0;
+            }
+        } else if (action == PUNCH || action == KICK) {
             if (this.currentState == IDLE) {
                 this.currentState = action;
                 this.stateTimer = 0;

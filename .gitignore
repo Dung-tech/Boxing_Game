@@ -86,7 +86,9 @@ www-test/
 .externalToolBuilders/
 *.launch
 
-
+# IntelliJ
+.idea/
+*.iml
 ## NetBeans:
 
 /nbproject/private/

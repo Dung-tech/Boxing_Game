@@ -44,7 +44,8 @@ public final class Constants {
     }
     public enum ControlMode {
         KEYBOARD,
-        CAMERA_AI
+        CAMERA_AI,
+        CAMERA_POSE
     }
 
     // Thêm vào Constants.java
