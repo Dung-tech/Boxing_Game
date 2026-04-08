@@ -31,9 +31,10 @@ PUNCH_MOTION_MIN = 0.020
 PUNCH_Z_BASE_MIN = 0.055
 PUNCH_Z_DELTA_MIN = 0.022
 
-KICK_BOTH_EXT_FACTOR = 0.85
-KICK_Y_ALIGN_FACTOR = 0.20
-KICK_ARM_HEIGHT_FACTOR = 0.30
+KICK_HAND_UP_SHOULDER_FACTOR = 0.22
+KICK_HAND_UP_NOSE_FACTOR = 0.05
+KICK_OTHER_HAND_LOW_FACTOR = 0.08
+KICK_ELBOW_UP_FACTOR = 0.02
 
 
 class PoseGestureRecognizer:
@@ -182,8 +183,6 @@ class PoseGestureRecognizer:
         )
 
         # -------- Burst gestures --------
-        fists_together = self._dist(lw, rw) < 0.28 * shoulder_width and abs(((lw[1] + rw[1]) * 0.5) - chest_y) < 0.35 * torso_len
-
         prev_lx = lw[0] if self.prev_left_wrist_x is None else self.prev_left_wrist_x
         prev_rx = rw[0] if self.prev_right_wrist_x is None else self.prev_right_wrist_x
         prev_ly = lw[1] if self.prev_left_wrist_y is None else self.prev_left_wrist_y
@@ -198,17 +197,23 @@ class PoseGestureRecognizer:
         left_motion = abs(lw[0] - prev_lx) + abs(lw[1] - prev_ly) > PUNCH_MOTION_MIN
         right_motion = abs(rw[0] - prev_rx) + abs(rw[1] - prev_ry) > PUNCH_MOTION_MIN
 
-        # Make punch stricter: one hand must be clearly extended and moving.
+        # Make punch stricter: hand must be clearly extended and moving.
         is_left_punch = left_ext and (left_motion or left_thrust)
         is_right_punch = right_ext and (right_motion or right_thrust)
-        is_punch = is_left_punch or is_right_punch
+        is_double_punch = is_left_punch and is_right_punch
+        is_single_punch = is_left_punch != is_right_punch
 
-        # Kick rule: both arms straight in front/at chest level.
-        left_kick_ext = self._dist(lw, ls) > KICK_BOTH_EXT_FACTOR * torso_len
-        right_kick_ext = self._dist(rw, rs) > KICK_BOTH_EXT_FACTOR * torso_len
-        arms_aligned = abs(lw[1] - rw[1]) < KICK_Y_ALIGN_FACTOR * torso_len
-        arms_not_low = lw[1] < (chest_y + KICK_ARM_HEIGHT_FACTOR * torso_len) and rw[1] < (chest_y + KICK_ARM_HEIGHT_FACTOR * torso_len)
-        is_kick_substitute = left_kick_ext and right_kick_ext and arms_aligned and arms_not_low
+        # KICK rule (pose mode): raise exactly one hand high, similar to waving one arm up.
+        left_hand_high = lw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and lw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
+        right_hand_high = rw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and rw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
+        left_arm_up_shape = lw[1] < (le[1] - KICK_ELBOW_UP_FACTOR * torso_len)
+        right_arm_up_shape = rw[1] < (re[1] - KICK_ELBOW_UP_FACTOR * torso_len)
+        left_other_hand_not_up = rw[1] > (mid_shoulder_y - KICK_OTHER_HAND_LOW_FACTOR * torso_len)
+        right_other_hand_not_up = lw[1] > (mid_shoulder_y - KICK_OTHER_HAND_LOW_FACTOR * torso_len)
+
+        is_left_hand_up_kick = left_hand_high and left_arm_up_shape and left_other_hand_not_up
+        is_right_hand_up_kick = right_hand_high and right_arm_up_shape and right_other_hand_not_up
+        is_one_hand_up_kick = (is_left_hand_up_kick or is_right_hand_up_kick) and not is_left_punch and not is_right_punch
 
         self.prev_left_wrist_x = lw[0]
         self.prev_right_wrist_x = rw[0]
@@ -219,17 +224,18 @@ class PoseGestureRecognizer:
         # ...existing code...
 
         if can_burst:
-            if fists_together:
+            # User mapping: SKILL = punch with both hands simultaneously.
+            if is_double_punch:
                 self.ready_for_next = False
                 self.last_burst_time = now
                 self.deadband_until = now + BURST_DEADBAND_SECONDS
                 return "SKILL"
-            if is_punch:
+            if is_single_punch:
                 self.ready_for_next = False
                 self.last_burst_time = now
                 self.deadband_until = now + BURST_DEADBAND_SECONDS
                 return "PUNCH"
-            if is_kick_substitute:
+            if is_one_hand_up_kick:
                 self.ready_for_next = False
                 self.last_burst_time = now
                 self.deadband_until = now + BURST_DEADBAND_SECONDS
