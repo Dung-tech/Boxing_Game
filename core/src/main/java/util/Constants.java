@@ -60,5 +60,6 @@ public final class Constants {
     public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
     public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
     public static final int   TOTAL_ROUNDS      = 3;
+    public static final int   ROUNDS_TO_WIN     = 2;
     public static final int   WIN_POINTS        = 1;
 }

@@ -23,8 +23,8 @@ public class MenuGame extends ScreenAdapter {
     private int fightSelected = 0; // Biến chọn riêng cho bảng này
 
 
-    // 4 mục menu theo yêu cầu của bạn
-    private String[] menuItems = {"FIGHT", "MANUAL", "SETTINGS", "QUIT GAME"};
+    // 5 mục menu
+    private String[] menuItems = {"FIGHT", "GYM", "MANUAL", "SETTINGS", "QUIT GAME"};
     private int selected = 0;
 
     // Trạng thái hiển thị Overlay
@@ -120,13 +120,16 @@ public class MenuGame extends ScreenAdapter {
                 case 0: // FIGHT
                     isFightOptionsVisible = true;
                     break;
-                case 1: // MANUAL
+                case 1: // GYM
+                    game.setScreen(new GymScreen(game));
+                    break;
+                case 2: // MANUAL
                     isManualVisible = true;
                     break;
-                case 2: // SETTINGS
+                case 3: // SETTINGS
                     isSettingsVisible = true;
                     break;
-                case 3: // QUIT GAME
+                case 4: // QUIT GAME
                     Gdx.app.exit();
                     break;
             }
@@ -167,11 +170,11 @@ public class MenuGame extends ScreenAdapter {
 
         // Khung Menu chính
         shapeRenderer.setColor(new Color(30/255f, 30/255f, 40/255f, 1f));
-        shapeRenderer.rect(menuX, menuY, 320, 320);
+        shapeRenderer.rect(menuX, menuY, 320, 390);
 
-        // Highlight mục được chọn (Màu đỏ giống bản Swing của bạn)
+        // Highlight mục được chọn
         shapeRenderer.setColor(new Color(180/255f, 30/255f, 30/255f, 1f));
-        float btnY = menuY + 235 - selected * 70; // Căn chỉnh lại khoảng cách
+        float btnY = menuY + 305 - selected * 70;
         shapeRenderer.rect(menuX + 20, btnY - 5, 280, 50);
 
         shapeRenderer.end();
@@ -183,7 +186,7 @@ public class MenuGame extends ScreenAdapter {
 
         font.getData().setScale(2f); // Chữ menu nhỏ hơn
         for (int i = 0; i < menuItems.length; i++) {
-            float textY = menuY + 270 - i * 70;
+            float textY = menuY + 340 - i * 70;
             drawCenter(game.batch, menuItems[i], Constants.APP_WIDTH, textY, Color.WHITE);
         }
         game.batch.end();
