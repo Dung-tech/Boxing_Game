@@ -15,8 +15,8 @@ public final class Constants {
     // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
     public static final int   MAX_HP            = 30;    // Đấm 20 phát là đi
     public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
-    public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
-    public static final float CHAR_SIZE         = 380f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
+    public static final float GROUND_Y          = 40f;  // Đứng cố định trên sàn
+    public static final float CHAR_SIZE         = 520f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
 
     // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
     public static final float DAMAGE_PUNCH      = 1f;
