@@ -53,6 +53,13 @@ public class GameScreen extends ScreenAdapter {
         p2.update(delta);
         combatSystem.update(p1, p2);
         roundSystem.update(delta, p1, p2);
+
+        if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
+            p1.reset();
+            p2.reset();
+            roundSystem.nextRound();
+        }
+
         gameStateManager.update(p1, p2, roundSystem);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.batch.begin();
@@ -60,7 +67,7 @@ public class GameScreen extends ScreenAdapter {
         p1.draw(game.batch);
         p2.draw(game.batch);
         effectManager.draw(game.batch, delta);
-        hud.render(game.batch, p1, p2);
+        hud.render(game.batch, p1, p2, roundSystem);
         game.batch.end();
     }
     @Override

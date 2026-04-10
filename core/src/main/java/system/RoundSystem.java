@@ -40,8 +40,9 @@ public class RoundSystem {
     }
 
     public boolean isMatchEnded() {
-        return currentRound >= Constants.TOTAL_ROUNDS ||
-            p1RoundWins >= 2 || p2RoundWins >= 2;  // thắng 2 hiệp trước là thắng luôn
+        return p1RoundWins >= Constants.ROUNDS_TO_WIN ||
+            p2RoundWins >= Constants.ROUNDS_TO_WIN ||
+            (roundEnded && currentRound >= Constants.TOTAL_ROUNDS); // Kết thúc sau hiệp 3 nếu chưa có ai đủ 2 hiệp
     }
 
     public void nextRound() {

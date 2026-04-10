@@ -48,14 +48,12 @@ public class GameOverScreen extends ScreenAdapter {
 
         // === KẾT QUẢ ===
         String resultText;
-        if (p1.isDead() && p2.isDead()) {
-            resultText = "DRAW";
-        } else if (p1.isDead()) {
-            resultText = "P2 WINS!";
-        } else if (p2.isDead()) {
-            resultText = "P1 WINS!";
+        if (roundSystem.getP1RoundWins() > roundSystem.getP2RoundWins()) {
+            resultText = "P1 WINS MATCH!";
+        } else if (roundSystem.getP2RoundWins() > roundSystem.getP1RoundWins()) {
+            resultText = "P2 WINS MATCH!";
         } else {
-            resultText = "TIME'S UP";
+            resultText = "DRAW MATCH";
         }
 
         bigFont.draw(batch, resultText, Constants.APP_WIDTH / 2f - 110, 410);
@@ -63,6 +61,9 @@ public class GameOverScreen extends ScreenAdapter {
         // === HP ===
         smallFont.draw(batch, "P1 Final HP : " + p1.getHp(), 380, 300);
         smallFont.draw(batch, "P2 Final HP : " + p2.getHp(), 680, 300);
+        smallFont.draw(batch,
+            "Round Score: P1 " + roundSystem.getP1RoundWins() + " - " + roundSystem.getP2RoundWins() + " P2",
+            Constants.APP_WIDTH / 2f - 160, 260);
 
         // === Hướng dẫn ===
         smallFont.draw(batch, "Press [ R ] to Play Again", Constants.APP_WIDTH / 2f - 130, 180);

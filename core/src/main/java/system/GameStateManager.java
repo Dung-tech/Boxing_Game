@@ -1,9 +1,6 @@
 package system;
 
 import com.badlogic.gdx.Game;
-import screen.GameOverScreen;
-import util.Constants;
-import com.badlogic.gdx.Game;
 import entity.Fighter;
 import screen.GameOverScreen;
 import util.Constants;
@@ -22,7 +19,7 @@ public class GameStateManager {
     public void update(Fighter p1, Fighter p2, RoundSystem roundSystem) {
         if (currentState != Constants.GameState.PLAYING) return;
 
-        if (p1.isDead() || p2.isDead() || roundSystem.isRoundEnded()) {
+        if (roundSystem.isRoundEnded() && roundSystem.isMatchEnded()) {
             currentState = Constants.GameState.GAME_OVER;
             game.setScreen(new GameOverScreen(
                 game,
