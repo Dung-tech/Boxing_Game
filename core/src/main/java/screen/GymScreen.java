@@ -8,6 +8,9 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import controller.GymerController;
+import entity.Gymer;
 import main.Main;
 import util.Constants;
 
@@ -16,14 +19,18 @@ public class GymScreen extends ScreenAdapter {
     private Texture backgroundGym;
     private Texture messiEating;
     private Texture messiDrinking;
+    private Texture messiSad;
     private Texture concentric;
     private Texture eccentric;
+    private Texture ronalSiu;
     private BitmapFont font;
     private GlyphLayout layout;
+    private ShapeRenderer shapeRenderer;
 
-    private boolean concentricState = true;
-    private float stateTimer = 0f;
-    private static final float STATE_INTERVAL = 0.5f;
+    private Gymer gymer;
+    private GymerController gymerController;
+    private boolean isGameOver = false;
+    private int gameOverSelected = 0;
 
     private boolean messiIsEating = true;
     private float messiStateTimer = 0f;
@@ -38,23 +45,37 @@ public class GymScreen extends ScreenAdapter {
         backgroundGym = new Texture("images/background/bakgroundGym.jpg");
         messiEating = new Texture("images/gym/messiEating.png");
         messiDrinking = new Texture("images/gym/messiDrinking.png");
+        messiSad = new Texture("images/gym/messiSad.png");
         concentric = new Texture("images/gym/Concentric.png");
         eccentric = new Texture("images/gym/Eccentric.png");
+        ronalSiu = new Texture("images/gym/ronalSiu.png");
 
         font = new BitmapFont();
         font.getData().setScale(1.4f);
         layout = new GlyphLayout();
+        shapeRenderer = new ShapeRenderer();
+
+        gymer = new Gymer();
+        gymerController = new GymerController(gymer);
     }
 
     @Override
     public void render(float delta) {
-        handleInput();
-        updateState(delta);
-        updateMessiState(delta);
+        if (isGameOver) {
+            handleGameOverInput();
+        } else {
+            handleGlobalInput();
+            gymerController.update();
+            updateMessiState(delta);
+            if (gymer.isExhausted()) {
+                isGameOver = true;
+                gameOverSelected = 0;
+            }
+        }
 
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        Texture centerTexture = concentricState ? concentric : eccentric;
+        Texture centerTexture = isGameOver ? ronalSiu : (gymer.isConcentric() ? concentric : eccentric);
         float centerW = 400f;
         float centerH = 400f;
         float centerX = (Constants.APP_WIDTH - centerW) / 2f;
@@ -65,7 +86,7 @@ public class GymScreen extends ScreenAdapter {
         float messiX = Constants.APP_WIDTH - messiW - 20f;
         float messiY = 20f;
 
-        Texture messiTexture = messiIsEating ? messiEating : messiDrinking;
+        Texture messiTexture = isGameOver ? messiSad : (messiIsEating ? messiEating : messiDrinking);
 
         game.batch.begin();
         game.batch.draw(backgroundGym, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
@@ -73,27 +94,41 @@ public class GymScreen extends ScreenAdapter {
         game.batch.draw(centerTexture, centerX, centerY, centerW, centerH);
 
         drawCenterText("GYM MODE", Constants.APP_HEIGHT - 30, Color.GOLD);
-        drawCenterText("Ronaldo Training: " + (concentricState ? "Concentric" : "Eccentric"), 65, Color.WHITE);
-        drawCenterText("Press [ SPACE ] to switch | [ ESC ] to menu", 35, Color.LIGHT_GRAY);
+        drawCenterText("Ronaldo Training: " + gymer.getStateLabel(), 65, Color.WHITE);
+        drawCenterText("[ ENTER ] CONCENTRIC | [ SPACE ] ECCENTRIC | [ ESC ] MENU", 35, Color.LIGHT_GRAY);
+
+        if (isGameOver) {
+            drawCenterText("GYMER HET SUC!", 170, Color.SCARLET);
+            drawCenterText(gameOverSelected == 0 ? "> CHOI TIEP <" : "CHOI TIEP", 130, gameOverSelected == 0 ? Color.GOLD : Color.WHITE);
+            drawCenterText(gameOverSelected == 1 ? "> THOAT RA MENU <" : "THOAT RA MENU", 95, gameOverSelected == 1 ? Color.GOLD : Color.WHITE);
+        }
         game.batch.end();
+
+        drawHpBar();
     }
 
-    private void handleInput() {
+    private void handleGlobalInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.setScreen(new MenuGame(game));
         }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            concentricState = !concentricState;
-            stateTimer = 0f;
-        }
     }
 
-    private void updateState(float delta) {
-        stateTimer += delta;
-        if (stateTimer >= STATE_INTERVAL) {
-            stateTimer = 0f;
-            concentricState = !concentricState;
+    private void handleGameOverInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            gameOverSelected = (gameOverSelected - 1 + 2) % 2;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            gameOverSelected = (gameOverSelected + 1) % 2;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            if (gameOverSelected == 0) {
+                gymer.reset();
+                messiIsEating = true;
+                messiStateTimer = 0f;
+                isGameOver = false;
+            } else {
+                game.setScreen(new MenuGame(game));
+            }
         }
     }
 
@@ -103,6 +138,27 @@ public class GymScreen extends ScreenAdapter {
             messiStateTimer = 0f;
             messiIsEating = !messiIsEating;
         }
+    }
+
+    private void drawHpBar() {
+        float x = 30f;
+        float y = Constants.APP_HEIGHT - 70f;
+        float width = 260f;
+        float height = 20f;
+        float hpRatio = (float) gymer.getHp() / gymer.getMaxHp();
+
+        shapeRenderer.setProjectionMatrix(game.batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f);
+        shapeRenderer.rect(x, y, width, height);
+        shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
+        shapeRenderer.rect(x, y, width * hpRatio, height);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        font.setColor(Color.WHITE);
+        font.draw(game.batch, "GYMER HP: " + gymer.getHp() + "/" + gymer.getMaxHp(), x, y - 8f);
+        game.batch.end();
     }
 
     private void drawCenterText(String text, float y, Color color) {
@@ -117,8 +173,11 @@ public class GymScreen extends ScreenAdapter {
         if (backgroundGym != null) backgroundGym.dispose();
         if (messiEating != null) messiEating.dispose();
         if (messiDrinking != null) messiDrinking.dispose();
+        if (messiSad != null) messiSad.dispose();
         if (concentric != null) concentric.dispose();
         if (eccentric != null) eccentric.dispose();
+        if (ronalSiu != null) ronalSiu.dispose();
         if (font != null) font.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
     }
 }
