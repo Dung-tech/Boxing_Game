@@ -29,10 +29,11 @@ public class Fighter {
         this.controlMode = mode;
         this.stats = new FighterStats();
         this.y = Constants.GROUND_Y;
-        this.x = (side == Constants.Side.LEFT) ?
-            Constants.APP_WIDTH * 0.38f - Constants.CHAR_SIZE / 2 :
-            Constants.APP_WIDTH * 0.53f - Constants.CHAR_SIZE / 2;
 
+        // Vị trí đứng sát nhau hơn + cân đối
+        this.x = (side == Constants.Side.LEFT) ?
+            Constants.APP_WIDTH * 0.30f :     // Ronaldo (bên trái)
+            Constants.APP_WIDTH * 0.45f;      // Messi (bên phải)
         loadTextures(folderPath);
     }
 
@@ -141,18 +142,32 @@ public class Fighter {
         boolean flipX = (side == Constants.Side.RIGHT);
         Texture currentTex = textures.get(currentState);
 
-        // Nếu đang ở trạng thái HIT thì dùng hit_stand.png
+        // Nếu đang HIT thì dùng hit_stand
         if (currentState == HIT) {
             currentTex = textures.get(HIT);
         }
 
-        // Nếu không tìm thấy texture thì fallback về IDLE
+        // Fallback về IDLE nếu không có
         if (currentTex == null) {
             currentTex = textures.get(IDLE);
         }
 
-        batch.draw(currentTex, x, y, Constants.CHAR_SIZE, Constants.CHAR_SIZE,
-            0, 0, currentTex.getWidth(), currentTex.getHeight(), flipX, false);
+        if (currentTex == null) return;
+
+        // ====================== SỬA CHÍNH Ở ĐÂY ======================
+        // Giữ chiều cao cố định = CHAR_SIZE (380f hiện tại)
+        // Chiều rộng tính theo tỷ lệ gốc của texture (682x1024 → sẽ ra khoảng 253)
+        float targetHeight = Constants.CHAR_SIZE;
+        float targetWidth  = targetHeight * (currentTex.getWidth() / (float) currentTex.getHeight());
+
+        // Vẽ với kích thước mới (không ép vuông nữa)
+        batch.draw(currentTex,
+            x, y,                          // vị trí
+            targetWidth, targetHeight,     // kích thước thực tế
+            0, 0,
+            currentTex.getWidth(),         // toàn bộ texture
+            currentTex.getHeight(),
+            flipX, false);
     }
 
     // GETTERS & SETTERS
