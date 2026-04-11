@@ -108,11 +108,11 @@ public class StartupHelper {
 			// Here, we are trying to work around an issue with how LWJGL3 loads its extracted .dll files.
 			// By default, LWJGL3 extracts to the directory specified by "java.io.tmpdir": usually, the user's home.
 			// If the user's name has non-ASCII (or some non-alphanumeric) characters in it, that would fail.
-			// By extracting to the relevant "ProgramData" folder, which is usually "C:\ProgramData", we avoid this.
+			// By extracting to the relevant ProgramData folder, we avoid this.
 			// We also temporarily change the "user.name" property to one without any chars that would be invalid.
 			// We revert our changes immediately after loading LWJGL3 natives.
 			String programData = System.getenv("ProgramData");
-			if (programData == null) programData = "C:\\Temp"; // if ProgramData isn't set, try some fallback.
+			if (programData == null) programData = System.getProperty("java.io.tmpdir", System.getProperty("user.dir"));
 			String prevTmpDir = System.getProperty("java.io.tmpdir", programData);
 			String prevUser = System.getProperty("user.name", "libGDX_User");
 			System.setProperty("java.io.tmpdir", programData + "\\libGDX-temp");

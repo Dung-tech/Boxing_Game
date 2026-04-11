@@ -1,7 +1,32 @@
 import cv2
+import os
 import socket
 import sys
 import time
+
+# Anchor paths so running from IDE, script, or bundled exe still works.
+if getattr(sys, "frozen", False):
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def resolve_project_root():
+    # Installed layout: app root contains assets and AI_Controller.exe.
+    if os.path.exists(os.path.join(SCRIPT_DIR, "assets")):
+        return SCRIPT_DIR
+
+    # Dev layout: this file sits under python_controller/ and assets is one level up.
+    parent = os.path.dirname(SCRIPT_DIR)
+    if os.path.exists(os.path.join(parent, "assets")):
+        return parent
+
+    return SCRIPT_DIR
+
+PROJECT_ROOT = resolve_project_root()
+ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
 from hand_detector import HandDetector
 from gesture_recognizer import GestureRecognizer
 from pose_detector import PoseDetector

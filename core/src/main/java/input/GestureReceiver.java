@@ -5,6 +5,9 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class GestureReceiver implements InputController, Runnable {
     private static GestureReceiver instance;
@@ -41,6 +44,7 @@ public class GestureReceiver implements InputController, Runnable {
     @Override
     public void run() {
         System.out.println("[GestureReceiver] Dang doi ket noi tu Python AI (2 Player Mode)...");
+        logAIControllerVisibility();
 
         while (running) {
             try (Socket socket = new Socket()) {
@@ -61,6 +65,23 @@ public class GestureReceiver implements InputController, Runnable {
                 System.err.println("[GestureReceiver] Mat ket noi AI, thu ket noi lai: " + e.getClass().getSimpleName());
                 try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
             }
+        }
+    }
+
+    private void logAIControllerVisibility() {
+        try {
+            Path runtimePath = Paths.get(GestureReceiver.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            Path appDir = Files.isRegularFile(runtimePath) ? runtimePath.getParent() : runtimePath;
+            Path aiExe = appDir.resolve("AI_Controller.exe");
+
+            if (Files.exists(aiExe)) {
+                System.out.println("[GestureReceiver] Tim thay AI_Controller.exe tai: " + aiExe);
+            } else {
+                System.out.println("[GestureReceiver] Khong tim thay AI_Controller.exe canh app: " + aiExe);
+            }
+        } catch (Exception e) {
+            System.out.println("[GestureReceiver] Khong xac dinh duoc vi tri AI_Controller.exe: " + e.getMessage());
         }
     }
 

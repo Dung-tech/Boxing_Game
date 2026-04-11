@@ -101,6 +101,7 @@ public class GymScreen extends ScreenAdapter {
             drawCenterText("GYMER HET SUC!", 170, Color.SCARLET);
             drawCenterText(gameOverSelected == 0 ? "> CHOI TIEP <" : "CHOI TIEP", 130, gameOverSelected == 0 ? Color.GOLD : Color.WHITE);
             drawCenterText(gameOverSelected == 1 ? "> THOAT RA MENU <" : "THOAT RA MENU", 95, gameOverSelected == 1 ? Color.GOLD : Color.WHITE);
+            drawCenterText("Nhan ESC de ve MENU", 60, Color.LIGHT_GRAY);
         }
         game.batch.end();
 
@@ -114,6 +115,10 @@ public class GymScreen extends ScreenAdapter {
     }
 
     private void handleGameOverInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame(game));
+            return;
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
             gameOverSelected = (gameOverSelected - 1 + 2) % 2;
         }
