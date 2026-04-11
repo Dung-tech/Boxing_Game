@@ -12,6 +12,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import main.Main;
 import util.Constants;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class MenuGame extends ScreenAdapter {
     private final Main game;
     private Texture background;
@@ -42,9 +46,23 @@ public class MenuGame extends ScreenAdapter {
 
     @Override
     public void show() {
+        shutdownCameraRuntime();
         if(game.soundManager != null){
             game.soundManager.playMenuMusic();
         }
+    }
+
+    private void shutdownCameraRuntime() {
+        input.GestureReceiver.getInstance().stop();
+        ProcessHandle.allProcesses()
+            .filter(process -> process.info().command()
+                .map(command -> command.toLowerCase().endsWith("ai_controller.exe"))
+                .orElse(false))
+            .forEach(process -> {
+                if (!process.destroy() || process.isAlive()) {
+                    process.destroyForcibly();
+                }
+            });
     }
 
     @Override
@@ -90,13 +108,12 @@ public class MenuGame extends ScreenAdapter {
                 }
                 if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                     if (fightSelected == 1) {
-                        startPythonAI("CAMERA_AI");
-                        // [BẬT AI] Kích hoạt Socket trước khi vào game
                         input.GestureReceiver.getInstance().start();
+                        startPythonAI("CAMERA_AI");
                         game.setScreen(new GameScreen(game, "CAMERA_AI"));
                     } else if (fightSelected == 2) {
-                        startPythonAI("CAMERA_POSE");
                         input.GestureReceiver.getInstance().start();
+                        startPythonAI("CAMERA_POSE");
                         game.setScreen(new GameScreen(game, "CAMERA_POSE"));
                     } else {
                         game.setScreen(new GameScreen(game, "KEYBOARD"));
@@ -228,19 +245,52 @@ public class MenuGame extends ScreenAdapter {
     private void startPythonAI(String aiMode) {
         Thread pythonThread = new Thread(() -> {
             try {
-                // Đường dẫn đến file python trong môi trường ảo của ông giáo
-                String pythonExe = "D:/Boxing_Game/.venv/Scripts/python.exe";
-                // Đường dẫn đến file script chính
-                String scriptPath = "D:/Boxing_Game/python_controller/main.py";
+                Path appRoot = resolveAppRoot();
+                Path packagedExe = appRoot.resolve("AI_Controller.exe");
+                Path pythonControllerDir = appRoot.resolve("python_controller");
+                Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
+                Path scriptPath = pythonControllerDir.resolve("main.py");
 
-                ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath, aiMode);
-                // Thiết lập thư mục làm việc để Python tìm đúng các file import (hand_detector,...)
-                pb.directory(new java.io.File("D:/Boxing_Game/python_controller"));
-                pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                Process process;
+                if (Files.exists(packagedExe)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExe.toString(), aiMode);
+                    exePb.directory(appRoot.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    process = exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
+                } else if (Files.exists(packagedExeInDev)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExeInDev.toString(), aiMode);
+                    exePb.directory(pythonControllerDir.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    process = exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
+                } else {
+                    if (!Files.exists(scriptPath)) {
+                        System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
+                        return;
+                    }
 
-                Process process = pb.start();
-                System.out.println("[System] Da tu dong kick-start Python AI!");
+                    String pythonExe = resolvePythonExecutable(appRoot);
+                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), aiMode);
+                    // Dung folder python_controller lam cwd de import module noi bo on dinh.
+                    pb.directory(pythonControllerDir.toFile());
+                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+
+                    try {
+                        process = pb.start();
+                    } catch (Exception firstError) {
+                        // Fallback for Windows machines that have Python launcher but no PATH alias "python".
+                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), aiMode);
+                        fallbackPb.directory(pythonControllerDir.toFile());
+                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        process = fallbackPb.start();
+                    }
+                    System.out.println("[System] Da tu dong kick-start Python AI!");
+                }
 
                 // (Tùy chọn) Đọc log từ Python nếu ông giáo muốn debug ngay trong Console của Java
             /*
@@ -254,6 +304,55 @@ public class MenuGame extends ScreenAdapter {
         });
         pythonThread.setDaemon(true);
         pythonThread.start();
+    }
+
+    private Path resolveAppRoot() {
+        Path runtimeBase = resolveRuntimeBaseDir();
+        if (runtimeBase != null && isAppRoot(runtimeBase)) {
+            return runtimeBase;
+        }
+
+        Path dir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+
+        // user.dir may point to module folders (e.g. /core or /lwjgl3) when run from IDE/Gradle.
+        for (int i = 0; i < 6 && dir != null; i++) {
+            if (isAppRoot(dir)) {
+                return dir;
+            }
+            dir = dir.getParent();
+        }
+
+        return Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+    }
+
+    private Path resolveRuntimeBaseDir() {
+        try {
+            Path codePath = Paths.get(MenuGame.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            return Files.isRegularFile(codePath) ? codePath.getParent() : codePath;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean isAppRoot(Path dir) {
+        if (dir == null) return false;
+        return Files.exists(dir.resolve("AI_Controller.exe"))
+            || Files.exists(dir.resolve("python_controller").resolve("main.py"));
+    }
+
+    private String resolvePythonExecutable(Path appRoot) {
+        String pythonFromEnv = System.getenv("PYTHON_EXE");
+        if (pythonFromEnv != null && !pythonFromEnv.trim().isEmpty()) {
+            return pythonFromEnv.trim();
+        }
+
+        Path venvPython = appRoot.resolve(".venv").resolve("Scripts").resolve("python.exe");
+        if (Files.exists(venvPython)) {
+            return venvPython.toString();
+        }
+
+        return "python";
     }
 
 

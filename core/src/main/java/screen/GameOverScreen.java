@@ -66,7 +66,7 @@ public class GameOverScreen extends ScreenAdapter {
             Constants.APP_WIDTH / 2f - 160, 260);
 
         // === Hướng dẫn ===
-        smallFont.draw(batch, "Press [ R ] to Play Again", Constants.APP_WIDTH / 2f - 130, 180);
+        smallFont.draw(batch, "Press [ R ] Play Again  |  [ ESC ] Menu", Constants.APP_WIDTH / 2f - 200, 180);
 
         batch.end();
 
@@ -76,6 +76,8 @@ public class GameOverScreen extends ScreenAdapter {
             p2.reset();
             roundSystem.reset();
             game.setScreen(new GameScreen((Main) game, currentMode));
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame((Main) game));
         }
     }
 
