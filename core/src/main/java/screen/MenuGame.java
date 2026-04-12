@@ -8,8 +8,10 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import main.Main;
+import ui.Manual;
 import util.Constants;
 
 import java.nio.file.Files;
@@ -34,14 +36,48 @@ public class MenuGame extends ScreenAdapter {
     // Trạng thái hiển thị Overlay
     private boolean isManualVisible = false;
     private boolean isSettingsVisible = false;
+    private final Manual manualUI;
 
     public MenuGame(Main game) {
         this.game = game;
         background = new Texture("images/background/background2.png");
-        font = new BitmapFont();
+        font = createReadableFont();
         font.getData().setScale(2f);
         layout = new GlyphLayout();
         shapeRenderer = new ShapeRenderer();
+        manualUI = new Manual();
+    }
+
+    private BitmapFont createReadableFont() {
+        String[] windowsFonts = {
+            "C:/Windows/Fonts/arial.ttf",
+            "C:/Windows/Fonts/segoeui.ttf"
+        };
+
+        for (String fontPath : windowsFonts) {
+            try {
+                if (java.nio.file.Files.exists(java.nio.file.Paths.get(fontPath))) {
+                    FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.absolute(fontPath));
+                    FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+                    parameter.size = 20;
+                    parameter.minFilter = Texture.TextureFilter.Linear;
+                    parameter.magFilter = Texture.TextureFilter.Linear;
+                    parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
+                        + "ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠ"
+                        + "àáâãèéêìíòóôõùúăđĩũơ"
+                        + "ƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềể"
+                        + "ỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừ"
+                        + "ỬỮỰỲỴỶỸửữựỳỵỷỹ";
+                    BitmapFont generated = generator.generateFont(parameter);
+                    generator.dispose();
+                    return generated;
+                }
+            } catch (Exception ignored) {
+                // Fallback to default bitmap font if system TTF cannot be loaded.
+            }
+        }
+
+        return new BitmapFont();
     }
 
     @Override
@@ -98,6 +134,11 @@ public class MenuGame extends ScreenAdapter {
                 return;
             }
 
+            if (isManualVisible) {
+                manualUI.handleTabInput();
+                return;
+            }
+
             // Điều khiển trong bảng chọn Mode
             if (isFightOptionsVisible) {
                 if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
@@ -141,6 +182,7 @@ public class MenuGame extends ScreenAdapter {
                     game.setScreen(new GymScreen(game));
                     break;
                 case 2: // MANUAL
+                    manualUI.reset();
                     isManualVisible = true;
                     break;
                 case 3: // SETTINGS
@@ -196,12 +238,11 @@ public class MenuGame extends ScreenAdapter {
 
         shapeRenderer.end();
 
-        // Vẽ chữ Menu
         game.batch.begin();
-        font.getData().setScale(4f); // Title to hơn
+        font.getData().setScale(4f);
         drawCenter(game.batch, "BOXING GAME", Constants.APP_WIDTH, 650, Color.GOLD);
 
-        font.getData().setScale(2f); // Chữ menu nhỏ hơn
+        font.getData().setScale(2f);
         for (int i = 0; i < menuItems.length; i++) {
             float textY = menuY + 340 - i * 70;
             drawCenter(game.batch, menuItems[i], Constants.APP_WIDTH, textY, Color.WHITE);
@@ -210,17 +251,7 @@ public class MenuGame extends ScreenAdapter {
     }
 
     private void drawManualOverlay() {
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0, 0, 0, 0.9f); // Nền đen mờ đậm hơn
-        shapeRenderer.rect(100, 100, Constants.APP_WIDTH - 200, Constants.APP_HEIGHT - 200);
-        shapeRenderer.end();
-
-        game.batch.begin();
-        drawCenter(game.batch, "--- HOW TO PLAY ---", Constants.APP_WIDTH, 550, Color.CYAN);
-        drawCenter(game.batch, "P1: D, A to Punch/Kick; W,S to BLOCK, DUCK; SPACE to SKILL", Constants.APP_WIDTH, 450, Color.WHITE);
-        drawCenter(game.batch, "P2: ->,<- to Punch/Kick; UP, DOWN to BLOCK, DUCK; ENTER to SKILL", Constants.APP_WIDTH, 380, Color.WHITE);
-        drawCenter(game.batch, "Press ESC to go back", Constants.APP_WIDTH, 200, Color.GRAY);
-        game.batch.end();
+        manualUI.draw(shapeRenderer, game.batch, font);
     }
 
     private void drawSettingsOverlay() {
@@ -235,6 +266,7 @@ public class MenuGame extends ScreenAdapter {
         drawCenter(game.batch, "Press ESC to go back", Constants.APP_WIDTH, 250, Color.GRAY);
         game.batch.end();
     }
+
 
     private void drawCenter(com.badlogic.gdx.graphics.g2d.SpriteBatch batch, String text, float width, float y, Color color) {
         layout.setText(font, text);
