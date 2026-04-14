@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import screen.GameScreen;
 import screen.MenuGame;
 import sound.SoundManager;
+import util.CameraRuntimeManager;
 
 public class Main extends Game {
     public SpriteBatch batch;
@@ -27,8 +28,9 @@ public class Main extends Game {
 
     @Override
     public void dispose() {
-        batch.dispose();
-        image.dispose();
-        soundManager.dispose();
+        CameraRuntimeManager.shutdownAll();
+        if (batch != null) batch.dispose();
+        if (image != null) image.dispose();
+        if (soundManager != null) soundManager.dispose();
     }
 }

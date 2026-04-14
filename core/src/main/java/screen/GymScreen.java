@@ -11,8 +11,14 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import controller.GymerController;
 import entity.Gymer;
+import input.GymGestureReceiver;
 import main.Main;
+import util.CameraRuntimeManager;
 import util.Constants;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class GymScreen extends ScreenAdapter {
     private final Main game;
@@ -57,6 +63,9 @@ public class GymScreen extends ScreenAdapter {
 
         gymer = new Gymer();
         gymerController = new GymerController(gymer);
+
+        GymGestureReceiver.getInstance().start();
+        startPythonAI();
     }
 
     @Override
@@ -95,7 +104,7 @@ public class GymScreen extends ScreenAdapter {
 
         drawCenterText("GYM MODE", Constants.APP_HEIGHT - 30, Color.GOLD);
         drawCenterText("Ronaldo Training: " + gymer.getStateLabel(), 65, Color.WHITE);
-        drawCenterText("[ ENTER ] CONCENTRIC | [ SPACE ] ECCENTRIC | [ ESC ] MENU", 35, Color.LIGHT_GRAY);
+        drawCenterText("[ENTER/SPACE] KEYBOARD + CAMERA GYMPOSE | [ESC] MENU", 35, Color.LIGHT_GRAY);
 
         if (isGameOver) {
             drawCenterText("GYMER HET SUC!", 170, Color.SCARLET);
@@ -173,8 +182,108 @@ public class GymScreen extends ScreenAdapter {
         font.draw(game.batch, text, x, y);
     }
 
+    private void startPythonAI() {
+        Thread pythonThread = new Thread(() -> {
+            try {
+                Path appRoot = resolveAppRoot();
+                Path packagedExe = appRoot.resolve("AI_Controller.exe");
+                Path pythonControllerDir = appRoot.resolve("python_controller");
+                Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
+                Path scriptPath = pythonControllerDir.resolve("core").resolve("main.py");
+
+                // In dev, prioritize script to avoid stale bundled exe mismatches.
+                if (Files.exists(scriptPath)) {
+                    String pythonExe = resolvePythonExecutable(appRoot);
+                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), "CAMERA_GYM_POSE");
+                    pb.directory(pythonControllerDir.toFile());
+                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+
+                    try {
+                        pb.start();
+                    } catch (Exception firstError) {
+                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), "CAMERA_GYM_POSE");
+                        fallbackPb.directory(pythonControllerDir.toFile());
+                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.start();
+                    }
+                    System.out.println("[System] Da tu dong kick-start Python AI (GYM POSE)!");
+                } else if (Files.exists(packagedExe)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExe.toString(), "CAMERA_GYM_POSE");
+                    exePb.directory(appRoot.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
+                } else if (Files.exists(packagedExeInDev)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExeInDev.toString(), "CAMERA_GYM_POSE");
+                    exePb.directory(pythonControllerDir.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
+                } else {
+                    System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
+                }
+            } catch (Exception e) {
+                System.err.println("[Loi System] Khong the tu dong bat Python: " + e.getMessage());
+            }
+        });
+        pythonThread.setDaemon(true);
+        pythonThread.start();
+    }
+
+    private Path resolveAppRoot() {
+        Path runtimeBase = resolveRuntimeBaseDir();
+        if (isAppRoot(runtimeBase)) {
+            return runtimeBase;
+        }
+
+        Path dir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+        for (int i = 0; i < 6 && dir != null; i++) {
+            if (isAppRoot(dir)) {
+                return dir;
+            }
+            dir = dir.getParent();
+        }
+
+        return Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+    }
+
+    private Path resolveRuntimeBaseDir() {
+        try {
+            Path codePath = Paths.get(GymScreen.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            return Files.isRegularFile(codePath) ? codePath.getParent() : codePath;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean isAppRoot(Path dir) {
+        if (dir == null) return false;
+        return Files.exists(dir.resolve("AI_Controller.exe"))
+            || Files.exists(dir.resolve("python_controller").resolve("core").resolve("main.py"));
+    }
+
+    private String resolvePythonExecutable(Path appRoot) {
+        String pythonFromEnv = System.getenv("PYTHON_EXE");
+        if (pythonFromEnv != null && !pythonFromEnv.trim().isEmpty()) {
+            return pythonFromEnv.trim();
+        }
+
+        Path venvPython = appRoot.resolve(".venv").resolve("Scripts").resolve("python.exe");
+        if (Files.exists(venvPython)) {
+            return venvPython.toString();
+        }
+
+        return "python";
+    }
+
     @Override
     public void dispose() {
+        CameraRuntimeManager.shutdownAll();
         if (backgroundGym != null) backgroundGym.dispose();
         if (messiEating != null) messiEating.dispose();
         if (messiDrinking != null) messiDrinking.dispose();

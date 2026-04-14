@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import main.Main;
 import ui.Manual;
+import util.CameraRuntimeManager;
 import util.Constants;
 
 import java.nio.file.Files;
@@ -89,16 +90,7 @@ public class MenuGame extends ScreenAdapter {
     }
 
     private void shutdownCameraRuntime() {
-        input.GestureReceiver.getInstance().stop();
-        ProcessHandle.allProcesses()
-            .filter(process -> process.info().command()
-                .map(command -> command.toLowerCase().endsWith("ai_controller.exe"))
-                .orElse(false))
-            .forEach(process -> {
-                if (!process.destroy() || process.isAlive()) {
-                    process.destroyForcibly();
-                }
-            });
+        CameraRuntimeManager.shutdownAll();
     }
 
     @Override
@@ -281,47 +273,42 @@ public class MenuGame extends ScreenAdapter {
                 Path packagedExe = appRoot.resolve("AI_Controller.exe");
                 Path pythonControllerDir = appRoot.resolve("python_controller");
                 Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
-                Path scriptPath = pythonControllerDir.resolve("main.py");
+                Path scriptPath = pythonControllerDir.resolve("core").resolve("main.py");
 
-                Process process;
-                if (Files.exists(packagedExe)) {
+                // In dev, prioritize script to avoid stale bundled exe mismatches.
+                if (Files.exists(scriptPath)) {
+                    String pythonExe = resolvePythonExecutable(appRoot);
+                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), aiMode);
+                    pb.directory(pythonControllerDir.toFile());
+                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+
+                    try {
+                        pb.start();
+                    } catch (Exception firstError) {
+                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), aiMode);
+                        fallbackPb.directory(pythonControllerDir.toFile());
+                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.start();
+                    }
+                    System.out.println("[System] Da tu dong kick-start Python AI!");
+                } else if (Files.exists(packagedExe)) {
                     ProcessBuilder exePb = new ProcessBuilder(packagedExe.toString(), aiMode);
                     exePb.directory(appRoot.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    process = exePb.start();
+                    exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
                 } else if (Files.exists(packagedExeInDev)) {
                     ProcessBuilder exePb = new ProcessBuilder(packagedExeInDev.toString(), aiMode);
                     exePb.directory(pythonControllerDir.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    process = exePb.start();
+                    exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
                 } else {
-                    if (!Files.exists(scriptPath)) {
-                        System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
-                        return;
-                    }
-
-                    String pythonExe = resolvePythonExecutable(appRoot);
-                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), aiMode);
-                    // Dung folder python_controller lam cwd de import module noi bo on dinh.
-                    pb.directory(pythonControllerDir.toFile());
-                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
-
-                    try {
-                        process = pb.start();
-                    } catch (Exception firstError) {
-                        // Fallback for Windows machines that have Python launcher but no PATH alias "python".
-                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), aiMode);
-                        fallbackPb.directory(pythonControllerDir.toFile());
-                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                        process = fallbackPb.start();
-                    }
-                    System.out.println("[System] Da tu dong kick-start Python AI!");
+                    System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
                 }
 
                 // (Tùy chọn) Đọc log từ Python nếu ông giáo muốn debug ngay trong Console của Java
@@ -370,7 +357,7 @@ public class MenuGame extends ScreenAdapter {
     private boolean isAppRoot(Path dir) {
         if (dir == null) return false;
         return Files.exists(dir.resolve("AI_Controller.exe"))
-            || Files.exists(dir.resolve("python_controller").resolve("main.py"));
+            || Files.exists(dir.resolve("python_controller").resolve("core").resolve("main.py"));
     }
 
     private String resolvePythonExecutable(Path appRoot) {
