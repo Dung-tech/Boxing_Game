@@ -59,6 +59,11 @@ public final class Constants {
     public static final String SFX_KICK      = "sounds/sfx/kick.wav";
     public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
     public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
+    public static final String SKILL_VIDEO_P1 = "videos/skill/skill_p1.mp4";
+    public static final String SKILL_VIDEO_P2 = "videos/skill/skill_p2.mp4";
+    public static final float SKILL_CUTSCENE_MIN_SECONDS = 1.2f;
+    public static final float SKILL_CUTSCENE_AUTO_RETURN_SECONDS = 4.5f;
+    public static final float SKILL_CUTSCENE_TARGET_SECONDS = 6.0f;
     public static final int   TOTAL_ROUNDS      = 3;
     public static final int   ROUNDS_TO_WIN     = 2;
     public static final int   WIN_POINTS        = 1;
