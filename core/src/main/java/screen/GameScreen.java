@@ -47,8 +47,14 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
+        // KIỂM TRA CUTSCENE PHẢI Ở ĐẦU TIÊN - trước mọi update
+        if (showSkillCutsceneIfNeeded()) {
+            return;
+        }
+
         if (p1Controller != null) p1Controller.update(delta);
         if (p2Controller != null) p2Controller.update(delta);
+
         p1.update(delta);
         p2.update(delta);
         combatSystem.update(p1, p2);
@@ -61,6 +67,7 @@ public class GameScreen extends ScreenAdapter {
         }
 
         gameStateManager.update(p1, p2, roundSystem);
+
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.batch.begin();
         game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
@@ -69,6 +76,18 @@ public class GameScreen extends ScreenAdapter {
         effectManager.draw(game.batch, delta);
         hud.render(game.batch, p1, p2, roundSystem);
         game.batch.end();
+    }
+
+    private boolean showSkillCutsceneIfNeeded() {
+        if (p1.consumeSkillCutsceneTrigger()) {
+            game.setScreen(new SkillCutsceneScreen(game, this, "P1"));
+            return true;
+        }
+        if (p2.consumeSkillCutsceneTrigger()) {
+            game.setScreen(new SkillCutsceneScreen(game, this, "P2"));
+            return true;
+        }
+        return false;
     }
     @Override
     public void show() {

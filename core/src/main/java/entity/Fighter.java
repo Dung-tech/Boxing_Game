@@ -17,6 +17,7 @@ public class Fighter {
     private FighterStats stats;
     private Map<Action, Texture> textures = new HashMap<>();
     private boolean isDead = false;
+    private boolean skillCutscenePending = false;
 
     // Trạng thái logic
     private Action currentState = Action.IDLE;
@@ -117,6 +118,7 @@ public class Fighter {
                 this.stateTimer = 0;
                 this.stats.hasHit = false;
                 this.stats.mana = 0;
+                this.skillCutscenePending = true;
             }
         } else if (action == PUNCH || action == KICK) {
             if (this.currentState == IDLE) {
@@ -181,6 +183,14 @@ public class Fighter {
     public int getHp() { return stats.hp; }
     public float getMana() {return stats.mana; }
 
+    public boolean consumeSkillCutsceneTrigger() {
+        if (skillCutscenePending) {
+            skillCutscenePending = false;
+            return true;
+        }
+        return false;
+    }
+
     public void takeDamage(float damage, Action attackType) {
         previousState = currentState;   // lưu trạng thái trước khi bị hit
 
@@ -229,6 +239,7 @@ public class Fighter {
         stats.hp = Constants.MAX_HP;
         stats.mana = Constants.MAX_MANA;
         isDead = false;
+        skillCutscenePending = false;
         resetToIdle();
     }
 
