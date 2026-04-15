@@ -38,6 +38,16 @@ public class GameOverScreen extends ScreenAdapter {
     }
 
     @Override
+    public void show() {
+        if (game instanceof Main) {
+            Main mainGame = (Main) game;
+            if (mainGame.soundManager != null) {
+                mainGame.soundManager.playEndMusic();
+            }
+        }
+    }
+
+    @Override
     public void render(float delta) {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
