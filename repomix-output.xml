@@ -43,40 +43,74 @@ The content is organized as follows:
 .editorconfig
 .gitattributes
 .gitignore
+assets/effects/hit_spark.p
+assets/effects/particle-star.png
 assets/images/background/background.jpg
+assets/images/background/background2.png
+assets/images/background/bakgroundGym.jpg
+assets/images/gym/Concentric.png
+assets/images/gym/Eccentric.png
+assets/images/gym/messiDrinking.png
+assets/images/gym/messiEating.png
+assets/images/gym/messiSad.png
+assets/images/gym/ronalSiu.png
+assets/images/idle.png
+assets/images/p1/block.png
+assets/images/p1/duck.png
+assets/images/p1/hit_duck.png
+assets/images/p1/hit_stand.png
 assets/images/p1/idle.png
+assets/images/p1/kick.png
+assets/images/p1/punch.png
+assets/images/p1/skill.png
+assets/images/p2/block.png
+assets/images/p2/duck.png
+assets/images/p2/hit_duck.png
+assets/images/p2/hit_stand.png
 assets/images/p2/idle.png
-assets/libgdx.png
+assets/images/p2/kick.png
+assets/images/p2/punch.png
+assets/images/p2/skill.png
 assets/sounds/bg_music.mp3
+assets/sounds/glass_break.mp3
 assets/sounds/hit.mp3
+assets/sounds/kick.mp3
+assets/sounds/menu_music.mp3
 assets/sounds/punch.mp3
+assets/videos/skill/README.txt
+assets/videos/skill/skill_p1.mp4
+assets/videos/skill/skill_p2.mp4
 build.gradle
 core/build.gradle
 core/src/main/java/controller/FighterController.java
+core/src/main/java/controller/GymerController.java
 core/src/main/java/controller/P1Controller.java
 core/src/main/java/controller/P2Controller.java
 core/src/main/java/effect/EffectManager.java
+core/src/main/java/entity/component/FighterRenderer.java
+core/src/main/java/entity/component/FighterStats.java
 core/src/main/java/entity/Fighter.java
-core/src/main/java/entity/HitBox.java
-core/src/main/java/input/CameraInput.java
+core/src/main/java/entity/Gymer.java
+core/src/main/java/input/GestureReceiver.java
 core/src/main/java/input/InputController.java
 core/src/main/java/input/KeyboardInput.java
 core/src/main/java/main/Main.java
 core/src/main/java/screen/GameOverScreen.java
 core/src/main/java/screen/GameScreen.java
-core/src/main/java/screen/MenuScreen.java
+core/src/main/java/screen/GymScreen.java
+core/src/main/java/screen/MenuGame.java
+core/src/main/java/screen/SkillCutsceneScreen.java
 core/src/main/java/sound/SoundManager.java
 core/src/main/java/system/CollisionSystem.java
 core/src/main/java/system/CombatSystem.java
 core/src/main/java/system/GameStateManager.java
 core/src/main/java/system/RenderSystem.java
 core/src/main/java/system/RoundSystem.java
-core/src/main/java/test/CombatTest.java
-core/src/main/java/test/InputTest.java
 core/src/main/java/ui/AnimationManager.java
 core/src/main/java/ui/GameHUD.java
 core/src/main/java/ui/HealthBar.java
 core/src/main/java/ui/ManaBar.java
+core/src/main/java/ui/Manual.java
 core/src/main/java/util/AssetManagerWrapper.java
 core/src/main/java/util/Config.java
 core/src/main/java/util/Constants.java
@@ -97,12 +131,282 @@ lwjgl3/src/main/resources/libgdx128.png
 lwjgl3/src/main/resources/libgdx16.png
 lwjgl3/src/main/resources/libgdx32.png
 lwjgl3/src/main/resources/libgdx64.png
+python_controller/camera_input.py
+python_controller/gesture_recognizer.py
+python_controller/gym_pose_recognizer.py
+python_controller/hand_detector.py
+python_controller/main.py
+python_controller/pose_detector.py
+python_controller/pose_gesture_recognizer.py
+python_controller/requirements.txt
 README.md
 settings.gradle
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="assets/videos/skill/README.txt">
+Place skill cutscene videos here.
+
+Supported names used by the game:
+- skill_p1.mp4 (or skill_p1.webm)
+- skill_p2.mp4 (or skill_p2.webm)
+
+In-game playback uses PNG frame sequences (no external player):
+- videos/skill/p1/frame_0001.png ... frame_XXXX.png
+- videos/skill/p2/frame_0001.png ... frame_XXXX.png
+
+If frame folders are missing, the game will show a missing cutscene message.
+</file>
+
+<file path="core/src/main/java/screen/SkillCutsceneScreen.java">
+package screen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.utils.Array;
+import main.Main;
+import util.Constants;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.File;
+
+public class SkillCutsceneScreen extends ScreenAdapter {
+    private final Main game;
+    private final ScreenAdapter returnScreen;
+    private final String videoAssetPath;
+    private final String title;
+
+    private ShapeRenderer shapeRenderer;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private float elapsed;
+
+    private boolean launchAttempted;
+    private boolean launchSucceeded;
+    private boolean finished;
+    private String debugMessage = "";
+    private Array<Texture> frames;
+    private float frameDuration;
+    private float targetDuration;
+
+    public SkillCutsceneScreen(Main game, ScreenAdapter returnScreen, String videoAssetPath, String title) {
+        this.game = game;
+        this.returnScreen = returnScreen;
+        this.videoAssetPath = videoAssetPath;
+        this.title = title;
+    }
+
+    @Override
+    public void show() {
+        shapeRenderer = new ShapeRenderer();
+        font = new BitmapFont();
+        font.getData().setScale(1.4f);
+        layout = new GlyphLayout();
+        elapsed = 0f;
+        launchCutsceneVideo();
+    }
+
+    @Override
+    public void render(float delta) {
+        elapsed += delta;
+
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.05f, 0.05f, 0.05f, 1f);
+        shapeRenderer.rect(0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        if (launchSucceeded && frames != null && frames.size > 0) {
+            int frameIndex = Math.min(frames.size - 1, (int) (elapsed / frameDuration));
+            Texture frame = frames.get(frameIndex);
+            drawVideoFrame(frame);
+        } else {
+            drawCentered(title + " CUTSCENE", Constants.APP_HEIGHT * 0.65f);
+            if (!launchAttempted) {
+                drawCentered("Dang mo video skill...", Constants.APP_HEIGHT * 0.50f);
+            } else {
+                drawCentered("Khong tim thay hoac khong mo duoc video skill", Constants.APP_HEIGHT * 0.50f);
+                drawCentered("Dat file vao assets/videos/skill/", Constants.APP_HEIGHT * 0.44f);
+                if (debugMessage != null && !debugMessage.isEmpty()) {
+                    drawCentered(debugMessage, Constants.APP_HEIGHT * 0.38f);
+                }
+            }
+        }
+
+        drawCentered("Nhan ENTER/SPACE/ESC de quay lai tran dau", Constants.APP_HEIGHT * 0.30f);
+        game.batch.end();
+
+        boolean canSkip = elapsed >= Constants.SKILL_CUTSCENE_MIN_SECONDS;
+        if (canSkip && (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE))) {
+            returnToFight();
+            return;
+        }
+
+        if (launchSucceeded && elapsed >= targetDuration && canSkip) {
+            returnToFight();
+            return;
+        }
+
+        if (!launchSucceeded && elapsed >= Constants.SKILL_CUTSCENE_AUTO_RETURN_SECONDS) {
+            returnToFight();
+        }
+    }
+
+    private void drawCentered(String text, float y) {
+        layout.setText(font, text);
+        float x = (Constants.APP_WIDTH - layout.width) / 2f;
+        font.draw(game.batch, text, x, y);
+    }
+
+    private void returnToFight() {
+        if (finished) {
+            return;
+        }
+
+        finished = true;
+        game.setScreen(returnScreen);
+        dispose();
+    }
+
+    private void launchCutsceneVideo() {
+        launchAttempted = true;
+        launchSucceeded = false;
+
+        FileHandle framesDir = resolveSkillFrames(videoAssetPath);
+        if (framesDir == null || !framesDir.exists() || !framesDir.isDirectory()) {
+            debugMessage = "Frames dir not found";
+            return;
+        }
+
+        try {
+            frames = loadFrames(framesDir);
+            if (frames == null || frames.isEmpty()) {
+                debugMessage = "Khong tim thay frame PNG trong " + framesDir.path();
+                return;
+            }
+
+            targetDuration = Constants.SKILL_CUTSCENE_TARGET_SECONDS;
+            frameDuration = targetDuration / frames.size;
+            launchSucceeded = true;
+            debugMessage = "Frames: " + frames.size + " @ " + frameDuration + "s";
+        } catch (Exception ignored) {
+            launchSucceeded = false;
+            debugMessage = "Frame load fail";
+        }
+    }
+
+    private void drawVideoFrame(Texture frame) {
+        float targetWidth = Constants.APP_WIDTH;
+        float targetHeight = Constants.APP_HEIGHT;
+        float frameRatio = frame.getWidth() / (float) frame.getHeight();
+        float targetRatio = targetWidth / targetHeight;
+
+        float drawWidth = targetWidth;
+        float drawHeight = targetHeight;
+        if (frameRatio > targetRatio) {
+            drawHeight = targetWidth / frameRatio;
+        } else if (frameRatio < targetRatio) {
+            drawWidth = targetHeight * frameRatio;
+        }
+
+        float x = (targetWidth - drawWidth) * 0.5f;
+        float y = (targetHeight - drawHeight) * 0.5f;
+        game.batch.draw(frame, x, y, drawWidth, drawHeight);
+    }
+
+    private FileHandle resolveSkillFrames(String primaryPath) {
+        String framesFolder = buildFramesFolder(primaryPath);
+        String[] candidates = buildCandidatePaths(framesFolder);
+        for (String candidate : candidates) {
+            FileHandle local = Gdx.files.local(candidate);
+            if (local.exists()) return local;
+
+            FileHandle absolute = Gdx.files.absolute(candidate);
+            if (absolute.exists()) return absolute;
+
+            FileHandle internal = Gdx.files.internal(candidate);
+            if (internal.exists()) return internal;
+        }
+
+        return null;
+    }
+
+    private String buildFramesFolder(String primaryPath) {
+        if (primaryPath.contains("skill_p1")) {
+            return "videos/skill/p1";
+        }
+        if (primaryPath.contains("skill_p2")) {
+            return "videos/skill/p2";
+        }
+        return "videos/skill";
+    }
+
+    private Array<Texture> loadFrames(FileHandle framesDir) {
+        FileHandle[] files = framesDir.list("png");
+        if (files == null || files.length == 0) {
+            return new Array<>();
+        }
+
+        java.util.Arrays.sort(files, java.util.Comparator.comparing(FileHandle::name));
+        Array<Texture> loaded = new Array<>(files.length);
+        for (FileHandle file : files) {
+            loaded.add(new Texture(file));
+        }
+        return loaded;
+    }
+
+    private String[] buildCandidatePaths(String relativeAssetPath) {
+        Path userDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+        Path runtimeDir = resolveRuntimeDir();
+
+        return new String[] {
+            relativeAssetPath,
+            "assets/" + relativeAssetPath,
+            userDir.resolve(relativeAssetPath).toString(),
+            userDir.resolve("assets").resolve(relativeAssetPath).toString(),
+            runtimeDir.resolve(relativeAssetPath).toString(),
+            runtimeDir.resolve("assets").resolve(relativeAssetPath).toString()
+        };
+    }
+
+    private Path resolveRuntimeDir() {
+        try {
+            Path codePath = Paths.get(SkillCutsceneScreen.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            return codePath.toFile().isFile() ? codePath.getParent() : codePath;
+        } catch (Exception ignored) {
+            return new File(".").toPath().toAbsolutePath().normalize();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (frames != null) {
+            for (Texture tex : frames) {
+                if (tex != null) tex.dispose();
+            }
+            frames = null;
+        }
+        if (shapeRenderer != null) shapeRenderer.dispose();
+        if (font != null) font.dispose();
+    }
+}
+</file>
 
 <file path=".editorconfig">
 # https://editorconfig.org
@@ -128,173 +432,6 @@ trim_trailing_whitespace = false
 <file path=".gitattributes">
 * text=auto eol=lf
 *.bat text=auto eol=crlf
-</file>
-
-<file path=".gitignore">
-## Gradle:
-.gradle/
-gradle-app.setting
-/build/
-/android/build/
-/core/build/
-/lwjgl2/build/
-/lwjgl3/build/
-/html/build/
-/teavm/build/
-/ios/build/
-/ios-moe/build/
-/headless/build/
-/server/build/
-/shared/build/
-
-## Java:
-*.class
-*.war
-*.ear
-hs_err_pid*
-.attach_pid*
-
-## Android:
-/android/libs/armeabi-v7a/
-/android/libs/arm64-v8a/
-/android/libs/x86/
-/android/libs/x86_64/
-/android/gen/
-/android/out/
-local.properties
-com_crashlytics_export_strings.xml
-
-## Robovm:
-/ios/robovm-build/
-
-## iOS:
-/ios/xcode/*.xcodeproj/*
-!/ios/xcode/*.xcodeproj/xcshareddata
-!/ios/xcode/*.xcodeproj/project.pbxproj
-/ios/xcode/native/
-/ios/IOSLauncher.app
-/ios/IOSLauncher.app.dSYM
-
-## GWT:
-/html/war/
-/html/gwt-unitCache/
-.apt_generated/
-/html/war/WEB-INF/deploy/
-/html/war/WEB-INF/classes/
-.gwt/
-gwt-unitCache/
-www-test/
-.gwt-tmp/
-
-## TeaVM:
-# Not sure yet...
-
-## IntelliJ, Android Studio:
-.idea/
-*.ipr
-*.iws
-*.iml
-
-## Eclipse:
-.classpath
-.project
-.metadata/
-/android/bin/
-/core/bin/
-/lwjgl2/bin/
-/lwjgl3/bin/
-/html/bin/
-/teavm/bin/
-/ios/bin/
-/ios-moe/bin/
-/headless/bin/
-/server/bin/
-/shared/bin/
-*.tmp
-*.bak
-*.swp
-*~.nib
-.settings/
-.loadpath
-.externalToolBuilders/
-*.launch
-
-
-## NetBeans:
-
-/nbproject/private/
-/android/nbproject/private/
-/core/nbproject/private/
-/lwjgl2/nbproject/private/
-/lwjgl3/nbproject/private/
-/html/nbproject/private/
-/teavm/nbproject/private/
-/ios/nbproject/private/
-/ios-moe/nbproject/private/
-/headless/nbproject/private/
-/server/nbproject/private/
-/shared/nbproject/private/
-
-/nbbuild/
-/android/nbbuild/
-/core/nbbuild/
-/lwjgl2/nbbuild/
-/lwjgl3/nbbuild/
-/html/nbbuild/
-/teavm/nbbuild/
-/ios/nbbuild/
-/ios-moe/nbbuild/
-/headless/nbbuild/
-/server/nbbuild/
-/shared/nbbuild/
-
-/dist/
-/android/dist/
-/core/dist/
-/lwjgl2/dist/
-/lwjgl3/dist/
-/html/dist/
-/teavm/dist/
-/ios/dist/
-/ios-moe/dist/
-/headless/dist/
-/server/dist/
-/shared/dist/
-
-/nbdist/
-/android/nbdist/
-/core/nbdist/
-/lwjgl2/nbdist/
-/lwjgl3/nbdist/
-/html/nbdist/
-/teavm/nbdist/
-/ios/nbdist/
-/ios-moe/nbdist/
-/headless/nbdist/
-/server/nbdist/
-/shared/nbdist/
-
-nbactions.xml
-nb-configuration.xml
-
-## OS-Specific:
-.DS_Store
-Thumbs.db
-
-## Miscellaneous:
-*~
-*.*#
-*#*#
-/.kotlin/
-/assets/assets.txt
-
-## Special cases:
-
-## There is a resource-config.json file generated by nativeimage.gradle if you use Graal Native Image.
-## Some usage may need extra resource configuration in a different file with the same name.
-## You could also add that configuration to the text in nativeimage.gradle .
-## You should delete or comment out the next line if you have configuration in a different resource-config.json .
-**/resource-config.json
 </file>
 
 <file path="build.gradle">
@@ -387,47 +524,184 @@ jar {
 }
 </file>
 
-<file path="core/src/main/java/effect/EffectManager.java">
-package effect;
+<file path="core/src/main/java/controller/GymerController.java">
+package controller;
 
-public class EffectManager {
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import entity.Gymer;
+
+public class GymerController {
+	private final Gymer gymer;
+
+	public GymerController(Gymer gymer) {
+		this.gymer = gymer;
+	}
+
+	public void update() {
+		if (gymer.isExhausted()) {
+			return;
+		}
+		handleInput();
+	}
+
+	private void handleInput() {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+			gymer.setConcentric();
+		}
+
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+			gymer.setEccentric();
+		}
+	}
 }
 </file>
 
-<file path="core/src/main/java/entity/HitBox.java">
+<file path="core/src/main/java/entity/component/FighterRenderer.java">
+package entity.component;
+
+import com.badlogic.gdx.graphics.Texture;
+import util.Constants.Action;
+import java.util.HashMap;
+import java.util.Map;
+
+public class FighterRenderer {
+    private Map<Action, Texture> textures = new HashMap<>();
+    private Texture hitTexture;
+    private float flinchTimer = 0;
+    private final float FLINCH_DURATION = 0.15f;
+
+    public FighterRenderer(String folderPath) {
+        textures.put(Action.IDLE,  new Texture(folderPath + "/idle.png"));
+        textures.put(Action.PUNCH, new Texture(folderPath + "/punch.png"));
+        textures.put(Action.KICK,  new Texture(folderPath + "/kick.png"));
+        textures.put(Action.BLOCK, new Texture(folderPath + "/block.png"));
+        textures.put(Action.DUCK,  new Texture(folderPath + "/duck.png"));
+        textures.put(Action.SKILL, new Texture(folderPath + "/skill.png"));
+        hitTexture = new Texture(folderPath + "/hit.png");
+    }
+
+    private void loadTextures(String path) {
+        // Chỉ liệt kê những Action đã có ảnh chuẩn
+        Action[] supportedActions = {
+            Action.IDLE,
+            Action.PUNCH,
+            Action.KICK,
+            Action.BLOCK,
+            Action.DUCK,
+            Action.SKILL
+        };
+
+        for (Action action : supportedActions) {
+            String fileName = path + "/" + action.name().toLowerCase() + ".png";
+            textures.put(action, new Texture(fileName));
+        }
+
+    }
+
+
+
+    public void dispose() {
+        for (Texture t : textures.values()) t.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/entity/component/FighterStats.java">
+package entity.component;
+
+import util.Constants;
+import util.Constants.Action;
+
+public class FighterStats {
+    public int hp = Constants.MAX_HP;
+    public float mana = 0;
+    public boolean hasHit = false;
+
+    public Action current = Action.IDLE;
+    public float timer = 0;
+    private final float DURATION = 0.5f;
+
+    public void takeDamage(float damage) {
+        this.hp = (int) Math.max(0, this.hp - damage);
+    }
+
+    public void addMana(float amount) {
+        this.mana = Math.min(Constants.MAX_MANA, this.mana + amount);
+    }
+    public void update(float delta) {
+        if (isTriggerAction()) {
+            timer += delta;
+            if (timer >= DURATION) {
+                reset();
+            }
+        }
+    }
+
+    public boolean isTriggerAction() {
+        return current == Action.PUNCH || current == Action.KICK || current == Action.SKILL;
+    }
+
+    public void reset() {
+        current = Action.IDLE;
+        timer = 0;
+    }
+}
+</file>
+
+<file path="core/src/main/java/entity/Gymer.java">
 package entity;
 
-public class HitBox {
-}
-</file>
+public class Gymer {
+	private static final int MAX_HP = 10;
 
-<file path="core/src/main/java/input/CameraInput.java">
-package input;
+	public enum TrainingState {
+		CONCENTRIC,
+		ECCENTRIC
+	}
 
-public class CameraInput {
-}
-</file>
+	private TrainingState trainingState = TrainingState.CONCENTRIC;
+	private int hp = MAX_HP;
+	private boolean eccentricPhaseDone = false;
 
-<file path="core/src/main/java/main/Main.java">
-package main;
+	public void setConcentric() {
+		if (trainingState == TrainingState.ECCENTRIC && eccentricPhaseDone && hp > 0) {
+			hp--;
+			eccentricPhaseDone = false;
+		}
+		trainingState = TrainingState.CONCENTRIC;
+	}
 
-import com.badlogic.gdx.Game;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import screen.GameScreen;
+	public void setEccentric() {
+		eccentricPhaseDone = true;
+		trainingState = TrainingState.ECCENTRIC;
+	}
 
-public class Main extends Game {
-    public SpriteBatch batch; // PHẢI LÀ PUBLIC
+	public boolean isConcentric() {
+		return trainingState == TrainingState.CONCENTRIC;
+	}
 
-    @Override
-    public void create() {
-        batch = new SpriteBatch();
-        this.setScreen(new GameScreen(this));
-    }
+	public String getStateLabel() {
+		return trainingState.name();
+	}
 
-    @Override
-    public void dispose() {
-        batch.dispose();
-    }
+	public int getHp() {
+		return hp;
+	}
+
+	public int getMaxHp() {
+		return MAX_HP;
+	}
+
+	public boolean isExhausted() {
+		return hp <= 0;
+	}
+
+	public void reset() {
+		hp = MAX_HP;
+		trainingState = TrainingState.CONCENTRIC;
+		eccentricPhaseDone = false;
+	}
 }
 </file>
 
@@ -438,45 +712,10 @@ public class CollisionSystem {
 }
 </file>
 
-<file path="core/src/main/java/system/CombatSystem.java">
-package system;
-
-public class CombatSystem {
-}
-</file>
-
-<file path="core/src/main/java/system/GameStateManager.java">
-package system;
-
-public class GameStateManager {
-}
-</file>
-
 <file path="core/src/main/java/system/RenderSystem.java">
 package system;
 
 public class RenderSystem {
-}
-</file>
-
-<file path="core/src/main/java/system/RoundSystem.java">
-package system;
-
-public class RoundSystem {
-}
-</file>
-
-<file path="core/src/main/java/test/CombatTest.java">
-package test;
-
-public class CombatTest {
-}
-</file>
-
-<file path="core/src/main/java/test/InputTest.java">
-package test;
-
-public class InputTest {
 }
 </file>
 
@@ -487,50 +726,145 @@ public class AnimationManager {
 }
 </file>
 
-<file path="core/src/main/java/ui/GameHUD.java">
+<file path="core/src/main/java/ui/Manual.java">
 package ui;
 
-public class GameHUD {
-}
-</file>
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.Align;
+import util.Constants;
 
-<file path="core/src/main/java/ui/HealthBar.java">
-package ui;
+public class Manual {
+	private final String[] tabs = {"BÀN PHÍM", "CAMERA AI", "CAMERA POSE", "GYM"};
+	private int selectedTab = 0;
+	private final GlyphLayout layout = new GlyphLayout();
 
-public class HealthBar {
-}
-</file>
+	private static final float SCALE_TITLE = 1.52f;
+	private static final float SCALE_TAB = 0.98f;
+	private static final float SCALE_SECTION = 1.16f;
+	private static final float SCALE_BODY_MAIN = 1.06f;
+	private static final float SCALE_BODY_HINT = 1.00f;
+	private static final float SCALE_FOOTER = 0.92f;
 
-<file path="core/src/main/java/ui/ManaBar.java">
-package ui;
+	public void reset() {
+		selectedTab = 0;
+	}
 
-public class ManaBar {
-}
-</file>
+	public void handleTabInput() {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT) || Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+			selectedTab = (selectedTab - 1 + tabs.length) % tabs.length;
+		}
+		if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT) || Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+			selectedTab = (selectedTab + 1) % tabs.length;
+		}
+	}
 
-<file path="core/src/main/java/util/AssetManagerWrapper.java">
-package util;
+	public void draw(ShapeRenderer shapeRenderer, SpriteBatch batch, BitmapFont font) {
+		float overlayX = 80f;
+		float overlayY = 58f;
+		float overlayW = Constants.APP_WIDTH - 160f;
+		float overlayH = Constants.APP_HEIGHT - 116f;
+		float tabY = overlayY + overlayH - 108f;
+		float tabW = 185f;
+		float tabH = 56f;
+		float tabGap = 12f;
+		float tabStartX = (Constants.APP_WIDTH - (tabW * tabs.length + tabGap * (tabs.length - 1))) / 2f;
+		float bodyX = overlayX + 34f;
+		float bodyY = overlayY + 44f;
+		float bodyW = overlayW - 68f;
+		float bodyH = overlayH - 190f;
 
-import com.badlogic.gdx.assets.AssetManager;
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+		shapeRenderer.setColor(0, 0, 0, 0.82f);
+		shapeRenderer.rect(0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
 
-public class AssetManagerWrapper {
-    private static AssetManager manager = new AssetManager();
+		shapeRenderer.setColor(14 / 255f, 18 / 255f, 26 / 255f, 0.98f);
+		shapeRenderer.rect(overlayX, overlayY, overlayW, overlayH);
 
-    public static void loadAll() {
-        // Dev 5 và Dev 4 sẽ vào đây thêm đường dẫn file khi có hàng xịn
-        // manager.load(Constants.SFX_PUNCH, Sound.class);
-        // manager.load(Constants.TEXTURE_ATLAS, TextureAtlas.class);
-    }
+		shapeRenderer.setColor(34 / 255f, 42 / 255f, 58 / 255f, 1f);
+		shapeRenderer.rect(bodyX, bodyY, bodyW, bodyH);
 
-    public static <T> T get(String fileName, Class<T> type) {
-        return manager.get(fileName, type);
-    }
+		for (int i = 0; i < tabs.length; i++) {
+			float x = tabStartX + i * (tabW + tabGap);
+			shapeRenderer.setColor(i == selectedTab ? new Color(0.80f, 0.22f, 0.22f, 1f) : new Color(0.22f, 0.28f, 0.38f, 1f));
+			shapeRenderer.rect(x, tabY, tabW, tabH);
+		}
+		shapeRenderer.end();
 
-    public static void dispose() {
-        manager.dispose();
-    }
+		batch.begin();
+		drawCenter(batch, font, "HƯỚNG DẪN", overlayY + overlayH - 20f, Color.CYAN, SCALE_TITLE);
 
-    public static boolean update() { return manager.update(); }
+		font.getData().setScale(SCALE_TAB);
+		for (int i = 0; i < tabs.length; i++) {
+			layout.setText(font, tabs[i]);
+			float tabTextX = tabStartX + i * (tabW + tabGap) + (tabW - layout.width) / 2f;
+			font.setColor(i == selectedTab ? Color.WHITE : Color.LIGHT_GRAY);
+			font.draw(batch, tabs[i], tabTextX, tabY + 38f);
+		}
+
+		float textX = bodyX + 26f;
+		float textW = bodyW - 52f;
+		float y = bodyY + bodyH - 24f;
+
+		if (selectedTab == 0) {
+			y = drawSectionTitle(batch, font, "BÀN PHÍM", textX, y, textW);
+			y = drawBullet(batch, font, "P1: D=Đấm | A=Đá | W=Đỡ | S=Né | SPACE=Tuyệt kỹ", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "P2: RIGHT=Đấm | LEFT=Đá | UP=Đỡ | DOWN=Né | ENTER=Tuyệt kỹ", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Giữ nhịp đánh đều, ưu tiên đỡ và né khi bị ép góc.", textX, y, textW, Color.LIGHT_GRAY);
+		} else if (selectedTab == 1) {
+			y = drawSectionTitle(batch, font, "CAMERA AI - NGÓN TAY", textX, y, textW);
+			y = drawBullet(batch, font, "Mapping: 0=IDLE | 1=Đấm | 2=Đá | 3=Đỡ | 4=Né | 5=Tuyệt kỹ", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Đứng nửa trái khung hình cho P1, nửa phải cho P2.", textX, y, textW, Color.LIGHT_GRAY);
+			y = drawBullet(batch, font, "Trước khi chơi, đợi camera ổn định và nhận diện rõ tay.", textX, y, textW, Color.LIGHT_GRAY);
+			y = drawBullet(batch, font, "Nhấn Q để tắt cửa sổ camera.", textX, y, textW, Color.WHITE);
+		} else if (selectedTab == 2) {
+			y = drawSectionTitle(batch, font, "CAMERA POSE - NỬA THÂN TRÊN", textX, y, textW);
+			y = drawBullet(batch, font, "Bắt buộc: camera phải thấy rõ nửa thân trên trước khi đấu.", textX, y, textW, Color.LIGHT_GRAY);
+			y = drawBullet(batch, font, "IDLE=guard | BLOCK=2 tay che giữa | DUCK=hạ người", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "PUNCH=đấm xuống rõ | KICK=đấm móc rõ | SKILL=đấm 2 tay", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Nếu tracking chậm: lùi nhẹ, đứng đủ sáng, tránh quay nhanh.", textX, y, textW, Color.LIGHT_GRAY);
+		} else {
+			y = drawSectionTitle(batch, font, "GYM", textX, y, textW);
+			y = drawBullet(batch, font, "ENTER: Concentric", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "SPACE: Eccentric", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "ESC: Về menu", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Mục tiêu: luân phiên động tác để giữ HP gymer.", textX, y, textW, Color.LIGHT_GRAY);
+			y = drawBullet(batch, font, "Khi game-over: W/S hoặc UP/DOWN để chọn, ENTER để xác nhận.", textX, y, textW, Color.LIGHT_GRAY);
+			y = drawBullet(batch, font, "Có thể nhấn ESC để thoát nhanh về menu.", textX, y, textW, Color.LIGHT_GRAY);
+		}
+
+		drawCenter(batch, font, "LEFT/RIGHT (hoặc A/D) để đổi phần   |   ESC để đóng", overlayY + 26f, Color.SALMON, SCALE_FOOTER);
+		font.getData().setScale(2f);
+		batch.end();
+	}
+
+	private float drawLine(SpriteBatch batch, BitmapFont font, String text, float x, float y, float width, Color color, float scale) {
+		font.getData().setScale(scale);
+		layout.setText(font, text, color, width, Align.left, true);
+		font.draw(batch, layout, x, y);
+		return y - layout.height - 12f;
+	}
+
+	private float drawSectionTitle(SpriteBatch batch, BitmapFont font, String text, float x, float y, float width) {
+		return drawLine(batch, font, text, x, y, width, Color.GOLD, SCALE_SECTION);
+	}
+
+	private float drawBullet(SpriteBatch batch, BitmapFont font, String text, float x, float y, float width, Color color) {
+		return drawLine(batch, font, "- " + text, x, y, width, color, SCALE_BODY_MAIN);
+	}
+
+	private void drawCenter(SpriteBatch batch, BitmapFont font, String text, float y, Color color, float scale) {
+		font.getData().setScale(scale);
+		layout.setText(font, text);
+		font.setColor(color);
+		float x = (Constants.APP_WIDTH - layout.width) / 2f;
+		font.draw(batch, text, x, y);
+	}
 }
 </file>
 
@@ -935,6 +1269,698 @@ if "%OS%"=="Windows_NT" endlocal
 :omega
 </file>
 
+<file path="lwjgl3/nativeimage.gradle">
+project(":lwjgl3") {
+  apply plugin: "org.graalvm.buildtools.native"
+
+  graalvmNative {
+    binaries {
+      main {
+        imageName = appName
+        mainClass = application.mainClass
+        requiredVersion = '23.0'
+        buildArgs.add("-march=compatibility")
+        jvmArgs.addAll("-Dfile.encoding=UTF8")
+        sharedLibrary = false
+        resources.autodetect()
+      }
+    }
+  }
+
+  run {
+    doNotTrackState("Running the app should not be affected by Graal.")
+  }
+
+  // Modified from https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/ ; thanks again, Lyze!
+  // This creates a resource-config.json file based on the contents of the assets folder (and the libGDX icons).
+  // This file is used by Graal Native to embed those specific files.
+  // This has to run before nativeCompile, so it runs at the start of an unrelated resource-handling command.
+  generateResourcesConfigFile.doFirst {
+    def assetsFolder = new File("${project.rootDir}/assets/")
+    def lwjgl3 = project(':lwjgl3')
+    def resFolder = new File("${lwjgl3.projectDir}/src/main/resources/META-INF/native-image/${lwjgl3.ext.appName}")
+    resFolder.mkdirs()
+    def resFile = new File(resFolder, "resource-config.json")
+    resFile.delete()
+    resFile.append(
+            """{
+  "resources":{
+  "includes":[
+    {
+      "pattern": ".*(""")
+    // This adds every filename in the assets/ folder to a pattern that adds those files as resources.
+    fileTree(assetsFolder).each {
+      // The backslash-Q and backslash-E escape the start and end of a literal string, respectively.
+      resFile.append("\\\\Q${it.name}\\\\E|")
+    }
+    // We also match all of the window icon images this way and the font files that are part of libGDX.
+    resFile.append(
+            """libgdx.+\\\\.png|lsans.+)"
+    }
+  ]},
+  "bundles":[]
+}"""
+    )
+  }
+}
+</file>
+
+<file path="python_controller/camera_input.py">
+# camera_input.py
+import cv2
+import time
+import logging
+
+class CameraInput:
+    def __init__(self, camera_id=0, width=640, height=480, reconnect_interval=5):
+        self.camera_id = camera_id
+        self.cap = None
+        self.width = width
+        self.height = height
+        self.reconnect_interval = reconnect_interval
+        logging.basicConfig(level=logging.INFO)
+
+    def open_camera(self):
+        if self.cap is not None:
+            self.cap.release()
+        self.cap = cv2.VideoCapture(self.camera_id)
+        # Cấu hình độ phân giải
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        if not self.cap.isOpened():
+            logging.error(f"Không mở được camera #{self.camera_id}")
+            return False
+        logging.info(f"Camera #{self.camera_id} đã kết nối.")
+        return True
+
+    def get_frame(self):
+        # Mở camera nếu chưa mở
+        if self.cap is None or not self.cap.isOpened():
+            if not self.open_camera():
+                return None
+        # Đọc frame
+        ret, frame = self.cap.read()
+        if not ret:
+            logging.warning("Không đọc được frame từ camera, thử kết nối lại.")
+            self.cap.release()
+            time.sleep(self.reconnect_interval)
+            if self.open_camera():
+                ret, frame = self.cap.read()
+            if not ret:
+                return None
+        return frame
+</file>
+
+<file path="python_controller/gym_pose_recognizer.py">
+
+</file>
+
+<file path="python_controller/pose_detector.py">
+import cv2
+import mediapipe as mp
+
+mp_pose = mp.solutions.pose
+mp_drawing = mp.solutions.drawing_utils
+
+
+class PoseDetector:
+    def __init__(self):
+        # Separate models per side to keep tracking stable for each player half.
+        self.pose_p1 = mp_pose.Pose(
+            static_image_mode=False,
+            model_complexity=0,
+            smooth_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        self.pose_p2 = mp_pose.Pose(
+            static_image_mode=False,
+            model_complexity=0,
+            smooth_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+
+    def detect(self, frame):
+        h, w, _ = frame.shape
+        mid = w // 2
+
+        p1_roi = frame[:, :mid]
+        p2_roi = frame[:, mid:]
+
+        p1_rgb = cv2.cvtColor(p1_roi, cv2.COLOR_BGR2RGB)
+        p2_rgb = cv2.cvtColor(p2_roi, cv2.COLOR_BGR2RGB)
+        p1_rgb.flags.writeable = False
+        p2_rgb.flags.writeable = False
+
+        p1_result = self.pose_p1.process(p1_rgb)
+        p2_result = self.pose_p2.process(p2_rgb)
+
+        if p1_result.pose_landmarks:
+            mp_drawing.draw_landmarks(p1_roi, p1_result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+        if p2_result.pose_landmarks:
+            mp_drawing.draw_landmarks(p2_roi, p2_result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+        return {
+            "P1": p1_result.pose_landmarks,
+            "P2": p2_result.pose_landmarks,
+        }
+</file>
+
+<file path="README.md">
+# BoxingGame
+
+A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+
+This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+
+## Platforms
+
+- `core`: Main module with the application logic shared by all platforms.
+- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+
+## Gradle
+
+This project uses [Gradle](https://gradle.org/) to manage dependencies.
+The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
+Useful Gradle tasks and flags:
+
+- `--continue`: when using this flag, errors will not stop the tasks from running.
+- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
+- `--offline`: when using this flag, cached dependency archives will be used.
+- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
+- `build`: builds sources and archives of every project.
+- `cleanEclipse`: removes Eclipse project data.
+- `cleanIdea`: removes IntelliJ project data.
+- `clean`: removes `build` folders, which store compiled classes and built archives.
+- `eclipse`: generates Eclipse project data.
+- `idea`: generates IntelliJ project data.
+- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
+- `lwjgl3:run`: starts the application.
+- `test`: runs unit tests (if any).
+
+Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
+For example, `core:clean` removes `build` folder only from the `core` project.
+</file>
+
+<file path="settings.gradle">
+plugins {
+  // Applies the foojay-resolver plugin to allow automatic download of JDKs.
+  id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+// A list of which subprojects to load as part of the same larger project.
+// You can remove Strings from the list and reload the Gradle project
+// if you want to temporarily disable a subproject.
+include 'lwjgl3', 'core'
+</file>
+
+<file path=".gitignore">
+## Gradle:
+.gradle/
+gradle-app.setting
+/build/
+/android/build/
+/core/build/
+/lwjgl2/build/
+/lwjgl3/build/
+/html/build/
+/teavm/build/
+/ios/build/
+/ios-moe/build/
+/headless/build/
+/server/build/
+/shared/build/
+
+## Java:
+*.class
+*.war
+*.ear
+hs_err_pid*
+.attach_pid*
+
+## Android:
+/android/libs/armeabi-v7a/
+/android/libs/arm64-v8a/
+/android/libs/x86/
+/android/libs/x86_64/
+/android/gen/
+/android/out/
+local.properties
+com_crashlytics_export_strings.xml
+
+## Robovm:
+/ios/robovm-build/
+
+## iOS:
+/ios/xcode/*.xcodeproj/*
+!/ios/xcode/*.xcodeproj/xcshareddata
+!/ios/xcode/*.xcodeproj/project.pbxproj
+/ios/xcode/native/
+/ios/IOSLauncher.app
+/ios/IOSLauncher.app.dSYM
+
+## GWT:
+/html/war/
+/html/gwt-unitCache/
+.apt_generated/
+/html/war/WEB-INF/deploy/
+/html/war/WEB-INF/classes/
+.gwt/
+gwt-unitCache/
+www-test/
+.gwt-tmp/
+
+## TeaVM:
+# Not sure yet...
+
+## IntelliJ, Android Studio:
+.idea/
+*.ipr
+*.iws
+*.iml
+
+## Eclipse:
+.classpath
+.project
+.metadata/
+/android/bin/
+/core/bin/
+/lwjgl2/bin/
+/lwjgl3/bin/
+/html/bin/
+/teavm/bin/
+/ios/bin/
+/ios-moe/bin/
+/headless/bin/
+/server/bin/
+/shared/bin/
+*.tmp
+*.bak
+*.swp
+*~.nib
+.settings/
+.loadpath
+.externalToolBuilders/
+*.launch
+
+# IntelliJ
+.idea/
+*.iml
+## NetBeans:
+
+/nbproject/private/
+/android/nbproject/private/
+/core/nbproject/private/
+/lwjgl2/nbproject/private/
+/lwjgl3/nbproject/private/
+/html/nbproject/private/
+/teavm/nbproject/private/
+/ios/nbproject/private/
+/ios-moe/nbproject/private/
+/headless/nbproject/private/
+/server/nbproject/private/
+/shared/nbproject/private/
+
+/nbbuild/
+/android/nbbuild/
+/core/nbbuild/
+/lwjgl2/nbbuild/
+/lwjgl3/nbbuild/
+/html/nbbuild/
+/teavm/nbbuild/
+/ios/nbbuild/
+/ios-moe/nbbuild/
+/headless/nbbuild/
+/server/nbbuild/
+/shared/nbbuild/
+
+/dist/
+/android/dist/
+/core/dist/
+/lwjgl2/dist/
+/lwjgl3/dist/
+/html/dist/
+/teavm/dist/
+/ios/dist/
+/ios-moe/dist/
+/headless/dist/
+/server/dist/
+/shared/dist/
+
+/nbdist/
+/android/nbdist/
+/core/nbdist/
+/lwjgl2/nbdist/
+/lwjgl3/nbdist/
+/html/nbdist/
+/teavm/nbdist/
+/ios/nbdist/
+/ios-moe/nbdist/
+/headless/nbdist/
+/server/nbdist/
+/shared/nbdist/
+
+nbactions.xml
+nb-configuration.xml
+
+## OS-Specific:
+.DS_Store
+Thumbs.db
+
+## Miscellaneous:
+*~
+*.*#
+*#*#
+/.kotlin/
+/assets/assets.txt
+
+## Special cases:
+
+## There is a resource-config.json file generated by nativeimage.gradle if you use Graal Native Image.
+## Some usage may need extra resource configuration in a different file with the same name.
+## You could also add that configuration to the text in nativeimage.gradle .
+## You should delete or comment out the next line if you have configuration in a different resource-config.json .
+**/resource-config.json
+</file>
+
+<file path="assets/effects/hit_spark.p">
+- Delay -
+active: false
+- Duration -
+lowMin: 100.0
+lowMax: 100.0
+- Count -
+min: 20
+max: 50
+- Emission -
+lowMin: 0.0
+lowMax: 0.0
+highMin: 250.0
+highMax: 250.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Life -
+lowMin: 0.0
+lowMax: 0.0
+highMin: 500.0
+highMax: 500.0
+relative: false
+scalingCount: 3
+scaling0: 1.0
+scaling1: 1.0
+scaling2: 0.3
+timelineCount: 3
+timeline0: 0.0
+timeline1: 0.66
+timeline2: 1.0
+- Life Offset -
+active: false
+- X Offset -
+active: false
+- Y Offset -
+active: false
+- Spawn Shape -
+shape: point
+- Spawn Width -
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 0.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Spawn Height -
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 0.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Scale -
+lowMin: 0.0
+lowMax: 0.0
+highMin: 20.0
+highMax: 30.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Velocity -
+active: true
+lowMin: 0.0
+lowMax: 0.0
+highMin: 300.0
+highMax: 500.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Angle -
+active: true
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 360.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Rotation -
+active: false
+- Wind -
+active: false
+- Gravity -
+active: false
+- Tint -
+colorsCount: 3
+colors0: 1.0
+colors1: 0.12156863
+colors2: 0.047058824
+timelineCount: 1
+timeline0: 0.0
+- Transparency -
+active: true
+scalingCount: 2
+scaling0: 1.0
+scaling1: 0.0
+timelineCount: 2
+timeline0: 0.0
+timeline1: 1.0
+- Options -
+attached: false
+continuous: false
+aligned: false
+additive: true
+behind: false
+premultipliedAlpha: false
+- Image Paths -
+particle-star.png
+</file>
+
+<file path="core/src/main/java/controller/P1Controller.java">
+package controller;
+
+import entity.Fighter;
+import input.InputController;
+
+public class P1Controller extends FighterController {
+    public P1Controller(Fighter fighter, InputController input) {
+        super(fighter, input);
+    }
+}
+</file>
+
+<file path="core/src/main/java/controller/P2Controller.java">
+package controller;
+
+import entity.Fighter;
+import input.InputController;
+
+public class P2Controller extends FighterController {
+    public P2Controller(Fighter fighter, InputController input) {
+        super(fighter, input);
+    }
+}
+</file>
+
+<file path="core/src/main/java/main/Main.java">
+package main;
+
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import screen.GameScreen;
+import screen.MenuGame;
+import sound.SoundManager;
+
+public class Main extends Game {
+    public SpriteBatch batch;
+    public Texture image;
+    public SoundManager soundManager;
+
+    @Override
+    public void create() {
+        batch = new SpriteBatch();
+        soundManager = new SoundManager();
+        soundManager.load();
+        this.setScreen(new MenuGame(this));
+    }
+
+    @Override
+    public void render() {
+        super.render();
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
+        image.dispose();
+        soundManager.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/ui/HealthBar.java">
+package ui;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+
+public class HealthBar {
+    private ShapeRenderer shapeRenderer;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private Color barColor;
+    private float maxWidth = 300;
+    private float height = 40;
+
+    public HealthBar(Color color) {
+        this.shapeRenderer = new ShapeRenderer();
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1.5f);
+        this.layout = new GlyphLayout();
+        this.barColor = color;
+    }
+
+    public void draw(SpriteBatch batch, float current, float max, float x, float y) {
+        // 1. Vẽ hình khối (Phải kết thúc batch trước khi dùng ShapeRenderer)
+        batch.end();
+
+        shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Vẽ Nền (Xám tối)
+        shapeRenderer.setColor(new Color(0.2f, 0.2f, 0.2f, 1f));
+        shapeRenderer.rect(x, y, maxWidth, height);
+
+        // Vẽ Thanh chỉ số (Máu/Mana)
+        float ratio = current / max;
+        shapeRenderer.setColor(barColor);
+        shapeRenderer.rect(x, y, maxWidth * ratio, height);
+
+        shapeRenderer.end();
+
+        // Vẽ viền đen
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.rect(x, y, maxWidth, height);
+        shapeRenderer.end();
+
+        // 2. Vẽ Chữ (Bật lại batch)
+        batch.begin();
+        String text = (int)current + " / " + (int)max;
+        layout.setText(font, text);
+        // Căn giữa chữ vào thanh
+        font.draw(batch, text, x + (maxWidth - layout.width) / 2, y + (height + layout.height) / 2);
+    }
+
+    public void dispose() {
+        shapeRenderer.dispose();
+        font.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/ui/ManaBar.java">
+package ui;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import util.Constants;
+
+public class ManaBar {
+    private ShapeRenderer shapeRenderer;
+    private BitmapFont font;
+    private GlyphLayout layout;
+
+    private final float width = 300;
+    private final float height = 30; // Thấp hơn thanh máu một chút cho đẹp
+
+    public ManaBar() {
+        this.shapeRenderer = new ShapeRenderer();
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1.2f); // Font nhỏ hơn thanh máu
+        this.layout = new GlyphLayout();
+    }
+
+    public void draw(SpriteBatch batch, float currentMana, float x, float y) {
+        // 1. Tạm dừng vẽ Texture để vẽ hình khối (Shape)
+        batch.end();
+
+        shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Vẽ Nền (Màu xám tối)
+        shapeRenderer.setColor(new Color(0.1f, 0.1f, 0.2f, 1f));
+        shapeRenderer.rect(x, y, width, height);
+
+        // Vẽ Mana (Màu xanh Cyan)
+        float ratio = currentMana / Constants.MAX_MANA;
+        shapeRenderer.setColor(Color.CYAN);
+        shapeRenderer.rect(x, y, width * ratio, height);
+
+        shapeRenderer.end();
+
+        // Vẽ Viền đen
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.rect(x, y, width, height);
+        shapeRenderer.end();
+
+        // 2. Tiếp tục vẽ Chữ (Bật lại batch)
+        batch.begin();
+        String text = (int)currentMana + " MANA";
+        layout.setText(font, text);
+
+        // Căn giữa chữ
+        font.setColor(Color.WHITE);
+        font.draw(batch, text, x + (width - layout.width) / 2, y + (height + layout.height) / 2);
+    }
+
+    public void dispose() {
+        shapeRenderer.dispose();
+        font.dispose();
+    }
+}
+</file>
+
 <file path="lwjgl3/build.gradle">
 buildscript {
   repositories {
@@ -949,6 +1975,7 @@ buildscript {
 }
 plugins {
   id "application"
+  id "com.gradleup.shadow" version "9.2.0" apply false
 }
 apply plugin: 'io.github.fourlastor.construo'
 
@@ -988,25 +2015,30 @@ run {
   if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
 
+// Gradle 9 removed StartScripts.mainClassName; expose a compatible extra property
+// before applying Shadow so startShadowScripts can be created safely.
+startScripts {
+  ext.mainClassName = application.mainClass.get()
+}
+apply plugin: 'com.gradleup.shadow'
+
 jar {
-// sets the name of the .jar file this produces to the name of the game or app, with the version after.
-  archiveFileName.set("${appName}-${projectVersion}.jar")
-// the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
+// Keep regular jar as thin artifact; fat packaging is handled by shadowJar.
+  archiveFileName.set("${appName}-${projectVersion}-thin.jar")
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-  dependsOn configurations.runtimeClasspath
-  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-// these "exclude" lines remove some unnecessary duplicate files in the output JAR.
-  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
-  dependencies {
-    exclude('META-INF/INDEX.LIST', 'META-INF/maven/**')
-  }
-// setting the manifest makes the JAR runnable.
-// enabling native access helps avoid a warning when Java 24 or later runs the JAR.
-// setting Multi-Release to true allows LWJGL3 to use different classes on recent Java versions.
   manifest {
     attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED', 'Multi-Release': 'true'
   }
-// this last step may help on some OSes that need extra instruction to make runnable JARs.
+}
+
+tasks.named('shadowJar') {
+  archiveFileName.set("${appName}-${projectVersion}.jar")
+  archiveClassifier.set("")
+  mergeServiceFiles()
+  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/maven/**')
+  manifest {
+    attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED', 'Multi-Release': 'true'
+  }
   doLast {
     file(archiveFile).setExecutable(true, false)
   }
@@ -1100,7 +2132,7 @@ construo {
 
 // Equivalent to the jar task; here for compatibility with gdx-setup.
 tasks.register('dist') {
-  dependsOn 'jar'
+  dependsOn 'shadowJar'
 }
 
 distributions {
@@ -1108,7 +2140,7 @@ distributions {
     contents {
       into('libs') {
         project.configurations.runtimeClasspath.files.findAll { file ->
-          file.getName() != project.tasks.jar.outputs.files.singleFile.name
+          file.getName() != project.tasks.shadowJar.outputs.files.singleFile.name
         }.each { file ->
           exclude file.name
         }
@@ -1117,67 +2149,11 @@ distributions {
   }
 }
 
-startScripts.dependsOn(':lwjgl3:jar')
-startScripts.classpath = project.tasks.jar.outputs.files
+startScripts.dependsOn(':lwjgl3:shadowJar')
+startScripts.classpath = project.tasks.shadowJar.outputs.files
 
 if(enableGraalNative == 'true') {
   apply from: file("nativeimage.gradle")
-}
-</file>
-
-<file path="lwjgl3/nativeimage.gradle">
-project(":lwjgl3") {
-  apply plugin: "org.graalvm.buildtools.native"
-
-  graalvmNative {
-    binaries {
-      main {
-        imageName = appName
-        mainClass = application.mainClass
-        requiredVersion = '23.0'
-        buildArgs.add("-march=compatibility")
-        jvmArgs.addAll("-Dfile.encoding=UTF8")
-        sharedLibrary = false
-        resources.autodetect()
-      }
-    }
-  }
-
-  run {
-    doNotTrackState("Running the app should not be affected by Graal.")
-  }
-
-  // Modified from https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/ ; thanks again, Lyze!
-  // This creates a resource-config.json file based on the contents of the assets folder (and the libGDX icons).
-  // This file is used by Graal Native to embed those specific files.
-  // This has to run before nativeCompile, so it runs at the start of an unrelated resource-handling command.
-  generateResourcesConfigFile.doFirst {
-    def assetsFolder = new File("${project.rootDir}/assets/")
-    def lwjgl3 = project(':lwjgl3')
-    def resFolder = new File("${lwjgl3.projectDir}/src/main/resources/META-INF/native-image/${lwjgl3.ext.appName}")
-    resFolder.mkdirs()
-    def resFile = new File(resFolder, "resource-config.json")
-    resFile.delete()
-    resFile.append(
-            """{
-  "resources":{
-  "includes":[
-    {
-      "pattern": ".*(""")
-    // This adds every filename in the assets/ folder to a pattern that adds those files as resources.
-    fileTree(assetsFolder).each {
-      // The backslash-Q and backslash-E escape the start and end of a literal string, respectively.
-      resFile.append("\\\\Q${it.name}\\\\E|")
-    }
-    // We also match all of the window icon images this way and the font files that are part of libGDX.
-    resFile.append(
-            """libgdx.+\\\\.png|lsans.+)"
-    }
-  ]},
-  "bundles":[]
-}"""
-    )
-  }
 }
 </file>
 
@@ -1292,11 +2268,11 @@ public class StartupHelper {
 			// Here, we are trying to work around an issue with how LWJGL3 loads its extracted .dll files.
 			// By default, LWJGL3 extracts to the directory specified by "java.io.tmpdir": usually, the user's home.
 			// If the user's name has non-ASCII (or some non-alphanumeric) characters in it, that would fail.
-			// By extracting to the relevant "ProgramData" folder, which is usually "C:\ProgramData", we avoid this.
+			// By extracting to the relevant ProgramData folder, we avoid this.
 			// We also temporarily change the "user.name" property to one without any chars that would be invalid.
 			// We revert our changes immediately after loading LWJGL3 natives.
 			String programData = System.getenv("ProgramData");
-			if (programData == null) programData = "C:\\Temp"; // if ProgramData isn't set, try some fallback.
+			if (programData == null) programData = System.getProperty("java.io.tmpdir", System.getProperty("user.dir"));
 			String prevTmpDir = System.getProperty("java.io.tmpdir", programData);
 			String prevUser = System.getProperty("user.name", "libGDX_User");
 			System.setProperty("java.io.tmpdir", programData + "\\libGDX-temp");
@@ -1411,51 +2387,1050 @@ public class StartupHelper {
 }
 </file>
 
-<file path="README.md">
-# BoxingGame
+<file path="python_controller/pose_gesture_recognizer.py">
+from collections import deque
+import math
+import time
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+# Shared tuning constants (global profile for both players/camera halves)
+POSTURE_HISTORY_SIZE = 4
+POSTURE_STABILITY_MIN = 2  # 2/4 for posture stabilization
 
-## Platforms
+VISIBILITY_MIN = 0.30
+LOSS_HOLD_SECONDS = 0.22
+BURST_COOLDOWN = 0.22
+BURST_DEADBAND_SECONDS = 0.08
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+BASELINE_IDLE_WINDOW = 0.12
+BASELINE_ALPHA = 0.06
 
-## Gradle
+GUARD_X_FACTOR = 0.55
+GUARD_Y_FACTOR = 0.45
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+BLOCK_UP_Y_FACTOR = 0.04
+BLOCK_CENTER_FACTOR = 0.42
+BLOCK_CLOSE_FACTOR = 0.72
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+DUCK_HIP_FACTOR = 0.10
+DUCK_HEAD_FACTOR = 0.06
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+PUNCH_EXT_FACTOR = 0.72
+PUNCH_ELBOW_EXT_FACTOR = 0.26
+PUNCH_MOTION_MIN = 0.020
+PUNCH_Z_BASE_MIN = 0.055
+PUNCH_Z_DELTA_MIN = 0.022
+
+KICK_HAND_UP_SHOULDER_FACTOR = 0.22
+KICK_HAND_UP_NOSE_FACTOR = 0.05
+KICK_OTHER_HAND_LOW_FACTOR = 0.08
+KICK_ELBOW_UP_FACTOR = 0.02
+
+
+class PoseGestureRecognizer:
+    def __init__(self):
+        self.posture_history = deque(maxlen=POSTURE_HISTORY_SIZE)
+        self.ready_for_next = True
+        self.last_burst_time = 0.0
+        self.burst_cooldown = BURST_COOLDOWN
+        self.last_stable_posture = "IDLE"
+        self.last_seen_time = time.monotonic()
+        self.loss_hold_seconds = LOSS_HOLD_SECONDS
+        self.deadband_until = 0.0
+
+        self.base_hip_y = None
+        self.base_nose_y = None
+        self.base_left_wrist_z = None
+        self.base_right_wrist_z = None
+
+        self.prev_left_wrist_x = None
+        self.prev_right_wrist_x = None
+        self.prev_left_wrist_y = None
+        self.prev_right_wrist_y = None
+        self.prev_left_wrist_z = None
+        self.prev_right_wrist_z = None
+        # ...existing code...
+
+    def _lm(self, lms, idx):
+        lm = lms.landmark[idx]
+        return lm.x, lm.y, lm.z, lm.visibility
+
+    def _dist(self, a, b):
+        return math.hypot(a[0] - b[0], a[1] - b[1])
+
+    def recognize(self, pose_landmarks):
+        now = time.monotonic()
+        if pose_landmarks is None:
+            self.posture_history.clear()
+            # User rule: if body disappears from camera, treat as DUCK.
+            self.ready_for_next = True
+            self.last_stable_posture = "DUCK"
+            return "DUCK"
+
+        lms = pose_landmarks
+
+        # MediaPipe Pose landmark indexes
+        NOSE = 0
+        LEFT_SHOULDER, RIGHT_SHOULDER = 11, 12
+        LEFT_ELBOW, RIGHT_ELBOW = 13, 14
+        LEFT_WRIST, RIGHT_WRIST = 15, 16
+        LEFT_HIP, RIGHT_HIP = 23, 24
+        # ...existing code...
+
+        nose = self._lm(lms, NOSE)
+        ls = self._lm(lms, LEFT_SHOULDER)
+        rs = self._lm(lms, RIGHT_SHOULDER)
+        le = self._lm(lms, LEFT_ELBOW)
+        re = self._lm(lms, RIGHT_ELBOW)
+        lw = self._lm(lms, LEFT_WRIST)
+        rw = self._lm(lms, RIGHT_WRIST)
+        lh = self._lm(lms, LEFT_HIP)
+        rh = self._lm(lms, RIGHT_HIP)
+        # ...existing code...
+
+        critical_vis = [ls[3], rs[3], lw[3], rw[3], lh[3], rh[3]]
+        if min(critical_vis) < VISIBILITY_MIN:
+            # Low visibility is treated as a successful hide/duck.
+            self.last_stable_posture = "DUCK"
+            return "DUCK"
+
+        self.last_seen_time = now
+
+        shoulder_width = max(1e-4, self._dist(ls, rs))
+        mid_shoulder_y = (ls[1] + rs[1]) * 0.5
+        mid_hip_y = (lh[1] + rh[1]) * 0.5
+        torso_len = max(1e-4, abs(mid_hip_y - mid_shoulder_y))
+        chest_y = mid_shoulder_y + 0.25 * torso_len
+        center_x = (ls[0] + rs[0]) * 0.5
+
+        # Update running baselines in stable posture only.
+        if self.base_hip_y is None:
+            self.base_hip_y = mid_hip_y
+            self.base_nose_y = nose[1]
+            self.base_left_wrist_z = lw[2]
+            self.base_right_wrist_z = rw[2]
+        else:
+            idleish = abs(mid_hip_y - self.base_hip_y) < BASELINE_IDLE_WINDOW and abs(nose[1] - self.base_nose_y) < BASELINE_IDLE_WINDOW
+            if idleish:
+                alpha = BASELINE_ALPHA
+                self.base_hip_y = (1 - alpha) * self.base_hip_y + alpha * mid_hip_y
+                self.base_nose_y = (1 - alpha) * self.base_nose_y + alpha * nose[1]
+                self.base_left_wrist_z = (1 - alpha) * self.base_left_wrist_z + alpha * lw[2]
+                self.base_right_wrist_z = (1 - alpha) * self.base_right_wrist_z + alpha * rw[2]
+
+        # -------- Posture states --------
+        left_guard = abs(lw[0] - ls[0]) < GUARD_X_FACTOR * shoulder_width and abs(lw[1] - chest_y) < GUARD_Y_FACTOR * torso_len
+        right_guard = abs(rw[0] - rs[0]) < GUARD_X_FACTOR * shoulder_width and abs(rw[1] - chest_y) < GUARD_Y_FACTOR * torso_len
+        is_idle = left_guard and right_guard
+
+        block_hands_up = lw[1] < (chest_y + BLOCK_UP_Y_FACTOR * torso_len) and rw[1] < (chest_y + BLOCK_UP_Y_FACTOR * torso_len)
+        block_hands_center = abs((lw[0] + rw[0]) * 0.5 - nose[0]) < BLOCK_CENTER_FACTOR * shoulder_width
+        block_hands_close = abs(lw[0] - rw[0]) < BLOCK_CLOSE_FACTOR * shoulder_width
+        is_block = block_hands_up and block_hands_center and block_hands_close
+
+        duck_hip = mid_hip_y > (self.base_hip_y + DUCK_HIP_FACTOR * torso_len)
+        duck_head = nose[1] > (self.base_nose_y + DUCK_HEAD_FACTOR * torso_len)
+        is_duck = duck_hip and duck_head
+
+        posture = "NONE"
+        # Block-first precedence for ambiguous overlap.
+        if is_block:
+            posture = "BLOCK"
+        elif is_duck:
+            posture = "DUCK"
+        elif is_idle:
+            posture = "IDLE"
+
+        self.posture_history.append(posture)
+        stable_posture = "NONE"
+        if len(self.posture_history) == self.posture_history.maxlen:
+            block_count = self.posture_history.count("BLOCK")
+            duck_count = self.posture_history.count("DUCK")
+            idle_count = self.posture_history.count("IDLE")
+
+            # Explicit 2/4 stabilization for BLOCK/DUCK.
+            if block_count >= POSTURE_STABILITY_MIN:
+                stable_posture = "BLOCK"
+            elif duck_count >= POSTURE_STABILITY_MIN:
+                stable_posture = "DUCK"
+            elif idle_count >= POSTURE_STABILITY_MIN:
+                stable_posture = "IDLE"
+
+        if stable_posture == "IDLE":
+            self.ready_for_next = True
+
+        if stable_posture in {"IDLE", "BLOCK", "DUCK"}:
+            self.last_stable_posture = stable_posture
+
+        # Match finger-mode gate: only IDLE re-arms burst actions.
+        if stable_posture == "IDLE":
+            self.ready_for_next = True
+
+        can_burst = (
+            self.ready_for_next
+            and now >= self.deadband_until
+            and (now - self.last_burst_time) >= self.burst_cooldown
+        )
+
+        # -------- Burst gestures --------
+        prev_lx = lw[0] if self.prev_left_wrist_x is None else self.prev_left_wrist_x
+        prev_rx = rw[0] if self.prev_right_wrist_x is None else self.prev_right_wrist_x
+        prev_ly = lw[1] if self.prev_left_wrist_y is None else self.prev_left_wrist_y
+        prev_ry = rw[1] if self.prev_right_wrist_y is None else self.prev_right_wrist_y
+        prev_lz = lw[2] if self.prev_left_wrist_z is None else self.prev_left_wrist_z
+        prev_rz = rw[2] if self.prev_right_wrist_z is None else self.prev_right_wrist_z
+
+        left_ext = self._dist(lw, ls) > PUNCH_EXT_FACTOR * torso_len and self._dist(lw, le) > PUNCH_ELBOW_EXT_FACTOR * torso_len
+        right_ext = self._dist(rw, rs) > PUNCH_EXT_FACTOR * torso_len and self._dist(rw, re) > PUNCH_ELBOW_EXT_FACTOR * torso_len
+        left_thrust = (self.base_left_wrist_z - lw[2]) > PUNCH_Z_BASE_MIN or (prev_lz - lw[2]) > PUNCH_Z_DELTA_MIN
+        right_thrust = (self.base_right_wrist_z - rw[2]) > PUNCH_Z_BASE_MIN or (prev_rz - rw[2]) > PUNCH_Z_DELTA_MIN
+        left_motion = abs(lw[0] - prev_lx) + abs(lw[1] - prev_ly) > PUNCH_MOTION_MIN
+        right_motion = abs(rw[0] - prev_rx) + abs(rw[1] - prev_ry) > PUNCH_MOTION_MIN
+
+        # Make punch stricter: hand must be clearly extended and moving.
+        is_left_punch = left_ext and (left_motion or left_thrust)
+        is_right_punch = right_ext and (right_motion or right_thrust)
+        is_double_punch = is_left_punch and is_right_punch
+        is_single_punch = is_left_punch != is_right_punch
+
+        # KICK rule (pose mode): raise exactly one hand high, similar to waving one arm up.
+        left_hand_high = lw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and lw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
+        right_hand_high = rw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and rw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
+        left_arm_up_shape = lw[1] < (le[1] - KICK_ELBOW_UP_FACTOR * torso_len)
+        right_arm_up_shape = rw[1] < (re[1] - KICK_ELBOW_UP_FACTOR * torso_len)
+        left_other_hand_not_up = rw[1] > (mid_shoulder_y - KICK_OTHER_HAND_LOW_FACTOR * torso_len)
+        right_other_hand_not_up = lw[1] > (mid_shoulder_y - KICK_OTHER_HAND_LOW_FACTOR * torso_len)
+
+        is_left_hand_up_kick = left_hand_high and left_arm_up_shape and left_other_hand_not_up
+        is_right_hand_up_kick = right_hand_high and right_arm_up_shape and right_other_hand_not_up
+        is_one_hand_up_kick = (is_left_hand_up_kick or is_right_hand_up_kick) and not is_left_punch and not is_right_punch
+
+        self.prev_left_wrist_x = lw[0]
+        self.prev_right_wrist_x = rw[0]
+        self.prev_left_wrist_y = lw[1]
+        self.prev_right_wrist_y = rw[1]
+        self.prev_left_wrist_z = lw[2]
+        self.prev_right_wrist_z = rw[2]
+        # ...existing code...
+
+        if can_burst:
+            # User mapping: SKILL = punch with both hands simultaneously.
+            if is_double_punch:
+                self.ready_for_next = False
+                self.last_burst_time = now
+                self.deadband_until = now + BURST_DEADBAND_SECONDS
+                return "SKILL"
+            if is_single_punch:
+                self.ready_for_next = False
+                self.last_burst_time = now
+                self.deadband_until = now + BURST_DEADBAND_SECONDS
+                return "PUNCH"
+            if is_one_hand_up_kick:
+                self.ready_for_next = False
+                self.last_burst_time = now
+                self.deadband_until = now + BURST_DEADBAND_SECONDS
+                return "KICK"
+
+        if stable_posture != "NONE":
+            return stable_posture
+
+        # Any non-matching posture falls back to default IDLE state.
+        return "IDLE"
 </file>
 
-<file path="settings.gradle">
-plugins {
-  // Applies the foojay-resolver plugin to allow automatic download of JDKs.
-  id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+<file path="python_controller/requirements.txt">
+opencv-python
+mediapipe==0.10.14
+</file>
+
+<file path="core/src/main/java/effect/EffectManager.java">
+package effect;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.ParticleEffect;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.utils.Array;
+
+public class EffectManager {
+
+    // Danh sách các hiệu ứng đang chạy trên màn hình
+    private Array<ParticleEffect> activeEffects;
+
+    // Mẫu hiệu ứng (Template) để nhân bản ra nhiều hạt
+    private ParticleEffect hitEffectTemplate;
+
+    public EffectManager() {
+        activeEffects = new Array<>();
+    }
+
+    public void load() {
+        hitEffectTemplate = new ParticleEffect();
+
+        // Đường dẫn file hiệu ứng (bạn sẽ tạo thư mục này ở Bước 2)
+        try {
+            hitEffectTemplate.load(
+                Gdx.files.internal("effects/hit_spark.p"),
+                Gdx.files.internal("effects")
+            );
+        } catch (Exception e) {
+            Gdx.app.log("EffectManager", "Khong tim thay file hieu ung hit_spark.p");
+        }
+    }
+
+    // Hàm tạo tia lửa tại vị trí x, y khi đấm trúng
+    public void spawnHitEffect(float x, float y) {
+        if (hitEffectTemplate != null) {
+            ParticleEffect newEffect = new ParticleEffect(hitEffectTemplate);
+            newEffect.scaleEffect(5.0f);
+            newEffect.setPosition(x, y);
+            newEffect.start();
+            activeEffects.add(newEffect);
+        }
+    }
+
+    // Vẽ hiệu ứng (Lead/Dev 4 sẽ gọi hàm này trong vòng lặp render)
+    public void draw(SpriteBatch batch, float delta) {
+        for (int i = 0; i < activeEffects.size; i++) {
+            ParticleEffect effect = activeEffects.get(i);
+            effect.draw(batch, delta);
+
+            // Xóa hiệu ứng khi chạy xong để giải phóng RAM
+            if (effect.isComplete()) {
+                effect.dispose();
+                activeEffects.removeIndex(i);
+                i--;
+            }
+        }
+    }
+
+    public void dispose() {
+        if (hitEffectTemplate != null) hitEffectTemplate.dispose();
+        for (ParticleEffect effect : activeEffects) {
+            effect.dispose();
+        }
+        activeEffects.clear();
+    }
 }
-// A list of which subprojects to load as part of the same larger project.
-// You can remove Strings from the list and reload the Gradle project
-// if you want to temporarily disable a subproject.
-include 'lwjgl3', 'core'
+</file>
+
+<file path="core/src/main/java/input/GestureReceiver.java">
+package input;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+public class GestureReceiver implements InputController, Runnable {
+    private static GestureReceiver instance;
+
+    // Tạo 2 "ngăn chứa" riêng cho 2 người chơi
+    private String p1Action = "NONE";
+    private String p2Action = "NONE";
+
+    private boolean running = true;
+    private Thread thread;
+
+    private final String HOST = "127.0.0.1";
+    private final int PORT = 65432;
+
+    private GestureReceiver() {}
+
+    public static GestureReceiver getInstance() {
+        if (instance == null) {
+            instance = new GestureReceiver();
+        }
+        return instance;
+    }
+
+    public void start() {
+        if (thread == null || !thread.isAlive()) {
+            running = true;
+            thread = new Thread(this);
+            thread.setDaemon(true);
+            thread.start();
+        }
+    }
+
+
+    @Override
+    public void run() {
+        System.out.println("[GestureReceiver] Dang doi ket noi tu Python AI (2 Player Mode)...");
+        logAIControllerVisibility();
+
+        while (running) {
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(HOST, PORT), 2000);
+                socket.setSoTimeout(3000);
+                System.out.println("[GestureReceiver] DA KET NOI VOI AI SERVER!");
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                String line;
+
+                while (running && (line = in.readLine()) != null) {
+                    // line se co dang "P1:PUNCH" hoac "P2:KICK"
+                    processIncomingData(line.trim().toUpperCase());
+                }
+            } catch (SocketTimeoutException e) {
+                // No line arrived in timeout window; keep waiting on same connection.
+            } catch (Exception e) {
+                System.err.println("[GestureReceiver] Mat ket noi AI, thu ket noi lai: " + e.getClass().getSimpleName());
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            }
+        }
+    }
+
+    private void logAIControllerVisibility() {
+        try {
+            Path runtimePath = Paths.get(GestureReceiver.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            Path appDir = Files.isRegularFile(runtimePath) ? runtimePath.getParent() : runtimePath;
+            Path aiExe = appDir.resolve("AI_Controller.exe");
+
+            if (Files.exists(aiExe)) {
+                System.out.println("[GestureReceiver] Tim thay AI_Controller.exe tai: " + aiExe);
+            } else {
+                System.out.println("[GestureReceiver] Khong tim thay AI_Controller.exe canh app: " + aiExe);
+            }
+        } catch (Exception e) {
+            System.out.println("[GestureReceiver] Khong xac dinh duoc vi tri AI_Controller.exe: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Logic tach chuoi de phan loai lenh cho tung Player
+     */
+    private void processIncomingData(String data) {
+        if (!data.contains(":")) return;
+
+        String[] parts = data.split(":");
+        if (parts.length < 2) return;
+
+        String playerTag = parts[0]; // "P1" hoac "P2"
+        String action = parts[1];    // "PUNCH", "KICK",...
+
+        synchronized (this) {
+            if (playerTag.equals("P1")) {
+                p1Action = action;
+            } else if (playerTag.equals("P2")) {
+                p2Action = action;
+            }
+        }
+    }
+
+    /**
+     * Ham moi: Lay hanh dong theo ID cua tung nguoi choi
+     */
+    public synchronized String getActionForPlayer(int playerNum) {
+        String action = (playerNum == 1) ? p1Action : p2Action;
+
+        // CHỈ RESET nêú là chiêu thức (Signal) - Đấm/Đá/Skill
+        if (action.equals("PUNCH") || action.equals("KICK") || action.equals("SKILL")) {
+            if (playerNum == 1) p1Action = "NONE";
+            else p2Action = "NONE";
+        }
+
+        // Nếu là BLOCK, DUCK hoặc IDLE, ta giữ nguyên để Fighter duy trì tư thế
+        return action;
+    }
+
+    /**
+     * Ham mac dinh tu Interface (Fallback cho P1 neu can)
+     */
+    @Override
+    public synchronized String getNextAction() {
+        return getActionForPlayer(1);
+    }
+
+    public void stop() {
+        running = false;
+        if (thread != null) thread.interrupt();
+    }
+
+    @Override
+    public boolean kick() {
+        return false;
+    }
+
+    @Override
+    public boolean duck() {
+        return false;
+    }
+
+    @Override
+    public boolean punch() {
+        return false;
+    }
+
+    @Override
+    public boolean block() {
+        return false;
+    }
+
+    @Override
+    public boolean skill() {
+        return false;
+    }
+
+    @Override
+    public void update(float delta) {
+
+    }
+
+    @Override
+    public void reset() {
+
+    }
+}
+</file>
+
+<file path="core/src/main/java/screen/GymScreen.java">
+package screen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import controller.GymerController;
+import entity.Gymer;
+import main.Main;
+import util.Constants;
+
+public class GymScreen extends ScreenAdapter {
+    private final Main game;
+    private Texture backgroundGym;
+    private Texture messiEating;
+    private Texture messiDrinking;
+    private Texture messiSad;
+    private Texture concentric;
+    private Texture eccentric;
+    private Texture ronalSiu;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private ShapeRenderer shapeRenderer;
+
+    private Gymer gymer;
+    private GymerController gymerController;
+    private boolean isGameOver = false;
+    private int gameOverSelected = 0;
+
+    private boolean messiIsEating = true;
+    private float messiStateTimer = 0f;
+    private static final float MESSI_STATE_INTERVAL = 2f;
+
+    public GymScreen(Main game) {
+        this.game = game;
+    }
+
+    @Override
+    public void show() {
+        backgroundGym = new Texture("images/background/bakgroundGym.jpg");
+        messiEating = new Texture("images/gym/messiEating.png");
+        messiDrinking = new Texture("images/gym/messiDrinking.png");
+        messiSad = new Texture("images/gym/messiSad.png");
+        concentric = new Texture("images/gym/Concentric.png");
+        eccentric = new Texture("images/gym/Eccentric.png");
+        ronalSiu = new Texture("images/gym/ronalSiu.png");
+
+        font = new BitmapFont();
+        font.getData().setScale(1.4f);
+        layout = new GlyphLayout();
+        shapeRenderer = new ShapeRenderer();
+
+        gymer = new Gymer();
+        gymerController = new GymerController(gymer);
+    }
+
+    @Override
+    public void render(float delta) {
+        if (isGameOver) {
+            handleGameOverInput();
+        } else {
+            handleGlobalInput();
+            gymerController.update();
+            updateMessiState(delta);
+            if (gymer.isExhausted()) {
+                isGameOver = true;
+                gameOverSelected = 0;
+            }
+        }
+
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        Texture centerTexture = isGameOver ? ronalSiu : (gymer.isConcentric() ? concentric : eccentric);
+        float centerW = 400f;
+        float centerH = 400f;
+        float centerX = (Constants.APP_WIDTH - centerW) / 2f;
+        float centerY = (Constants.APP_HEIGHT - centerH) / 2f - 20f;
+
+        float messiW = 220f * 2.2f;
+        float messiH = 220f * 2.2f;
+        float messiX = Constants.APP_WIDTH - messiW - 20f;
+        float messiY = 20f;
+
+        Texture messiTexture = isGameOver ? messiSad : (messiIsEating ? messiEating : messiDrinking);
+
+        game.batch.begin();
+        game.batch.draw(backgroundGym, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+        game.batch.draw(messiTexture, messiX, messiY, messiW, messiH);
+        game.batch.draw(centerTexture, centerX, centerY, centerW, centerH);
+
+        drawCenterText("GYM MODE", Constants.APP_HEIGHT - 30, Color.GOLD);
+        drawCenterText("Ronaldo Training: " + gymer.getStateLabel(), 65, Color.WHITE);
+        drawCenterText("[ ENTER ] CONCENTRIC | [ SPACE ] ECCENTRIC | [ ESC ] MENU", 35, Color.LIGHT_GRAY);
+
+        if (isGameOver) {
+            drawCenterText("GYMER HET SUC!", 170, Color.SCARLET);
+            drawCenterText(gameOverSelected == 0 ? "> CHOI TIEP <" : "CHOI TIEP", 130, gameOverSelected == 0 ? Color.GOLD : Color.WHITE);
+            drawCenterText(gameOverSelected == 1 ? "> THOAT RA MENU <" : "THOAT RA MENU", 95, gameOverSelected == 1 ? Color.GOLD : Color.WHITE);
+            drawCenterText("Nhan ESC de ve MENU", 60, Color.LIGHT_GRAY);
+        }
+        game.batch.end();
+
+        drawHpBar();
+    }
+
+    private void handleGlobalInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame(game));
+        }
+    }
+
+    private void handleGameOverInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame(game));
+            return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            gameOverSelected = (gameOverSelected - 1 + 2) % 2;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            gameOverSelected = (gameOverSelected + 1) % 2;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            if (gameOverSelected == 0) {
+                gymer.reset();
+                messiIsEating = true;
+                messiStateTimer = 0f;
+                isGameOver = false;
+            } else {
+                game.setScreen(new MenuGame(game));
+            }
+        }
+    }
+
+    private void updateMessiState(float delta) {
+        messiStateTimer += delta;
+        if (messiStateTimer >= MESSI_STATE_INTERVAL) {
+            messiStateTimer = 0f;
+            messiIsEating = !messiIsEating;
+        }
+    }
+
+    private void drawHpBar() {
+        float x = 30f;
+        float y = Constants.APP_HEIGHT - 70f;
+        float width = 260f;
+        float height = 20f;
+        float hpRatio = (float) gymer.getHp() / gymer.getMaxHp();
+
+        shapeRenderer.setProjectionMatrix(game.batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f);
+        shapeRenderer.rect(x, y, width, height);
+        shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
+        shapeRenderer.rect(x, y, width * hpRatio, height);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        font.setColor(Color.WHITE);
+        font.draw(game.batch, "GYMER HP: " + gymer.getHp() + "/" + gymer.getMaxHp(), x, y - 8f);
+        game.batch.end();
+    }
+
+    private void drawCenterText(String text, float y, Color color) {
+        layout.setText(font, text);
+        font.setColor(color);
+        float x = (Constants.APP_WIDTH - layout.width) / 2f;
+        font.draw(game.batch, text, x, y);
+    }
+
+    @Override
+    public void dispose() {
+        if (backgroundGym != null) backgroundGym.dispose();
+        if (messiEating != null) messiEating.dispose();
+        if (messiDrinking != null) messiDrinking.dispose();
+        if (messiSad != null) messiSad.dispose();
+        if (concentric != null) concentric.dispose();
+        if (eccentric != null) eccentric.dispose();
+        if (ronalSiu != null) ronalSiu.dispose();
+        if (font != null) font.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/system/CombatSystem.java">
+package system;
+
+import effect.EffectManager;
+import entity.Fighter;
+import sound.SoundManager;
+import util.Constants;
+import util.Constants.Action;
+
+public class CombatSystem {
+    private EffectManager effectManager;
+    private SoundManager soundManager;
+
+    public CombatSystem(EffectManager effectManager, SoundManager soundManager) {
+        this.effectManager = effectManager;
+        this.soundManager = soundManager;
+    }
+
+    public void update(Fighter p1, Fighter p2) {
+        checkHit(p1, p2);
+        checkHit(p2, p1);
+    }
+
+    private void checkHit(Fighter attacker, Fighter target) {
+        // Nếu không tấn công hoặc đã đánh trúng rồi thì bỏ qua
+        if (!attacker.isAttacking() || attacker.getStats().hasHit) return;
+
+        Action atk = attacker.getCurrentState();
+        Action def = target.getCurrentState();
+        boolean isBlocked = false;
+
+        // Logic khắc chế
+        if (atk == Action.PUNCH && def == Action.BLOCK) isBlocked = true;
+        if (atk == Action.KICK && def == Action.DUCK) isBlocked = true;
+        if (atk == Action.SKILL) isBlocked = false; // Skill phá mọi phòng thủ
+
+        if (!isBlocked) {
+            float dmg = (atk == Action.SKILL) ? Constants.DAMAGE_SKILL :
+                (atk == Action.PUNCH) ? Constants.DAMAGE_PUNCH : Constants.DAMAGE_KICK;
+
+            applyDamage(attacker, target, dmg, atk);
+        }
+    }
+
+    private void applyDamage(Fighter attacker, Fighter target, float damage, Action attackType) {
+        // Gọi takeDamage trên Fighter (đã có logic né đòn bên trong)
+        target.takeDamage(damage, attackType);
+
+        attacker.getStats().hasHit = true;
+
+        // Hồi mana cho người tấn công (trừ skill)
+        if (attackType != Action.SKILL) {
+            attacker.getStats().addMana(Constants.MANA_GAIN_PER_HIT);
+        }
+
+        // Hiệu ứng + âm thanh
+        effectManager.spawnHitEffect(target.getX() + 100, target.getY() + 100);
+        soundManager.playHit();
+    }
+}
+</file>
+
+<file path="core/src/main/java/system/GameStateManager.java">
+package system;
+
+import com.badlogic.gdx.Game;
+import entity.Fighter;
+import screen.GameOverScreen;
+import util.Constants;
+import main.Main;
+
+public class GameStateManager {
+    private final Game game;
+    private String controlMode;
+    private Constants.GameState currentState = Constants.GameState.PLAYING;
+
+    public GameStateManager(Main game, String mode) {
+        this.game = game;
+        this.controlMode = mode;
+    }
+
+    public void update(Fighter p1, Fighter p2, RoundSystem roundSystem) {
+        if (currentState != Constants.GameState.PLAYING) return;
+
+        if (roundSystem.isRoundEnded() && roundSystem.isMatchEnded()) {
+            currentState = Constants.GameState.GAME_OVER;
+            game.setScreen(new GameOverScreen(
+                game,
+                p1,
+                p2,
+                roundSystem,
+                ((Main) game).batch,
+                controlMode // Tham số thứ 6 còn thiếu đây rồi!
+            ));
+        }
+    }
+
+    public void reset() {
+        currentState = Constants.GameState.PLAYING;
+    }
+}
+</file>
+
+<file path="core/src/main/java/system/RoundSystem.java">
+package system;
+
+import util.Constants;
+import entity.Fighter;
+
+public class RoundSystem {
+    private int currentRound = 1;
+    private float timeLeft = Constants.ROUND_TIME;
+    private boolean roundEnded = false;
+    private int p1RoundWins = 0;
+    private int p2RoundWins = 0;
+
+    public void update(float delta, Fighter p1, Fighter p2) {
+        if (roundEnded) return;
+
+        timeLeft -= delta;
+
+        if (timeLeft <= 0 || p1.isDead() || p2.isDead()) {
+            endCurrentRound(p1, p2);
+        }
+    }
+
+    private void endCurrentRound(Fighter p1, Fighter p2) {
+        roundEnded = true;
+
+        if (p1.isDead() && !p2.isDead()) {
+            p2RoundWins++;
+        } else if (p2.isDead() && !p1.isDead()) {
+            p1RoundWins++;
+        } else if (p1.getHp() > p2.getHp()) {
+            p1RoundWins++;
+        } else if (p2.getHp() > p1.getHp()) {
+            p2RoundWins++;
+        }
+        // Hòa thì không ai được điểm
+    }
+
+    public boolean isRoundEnded() {
+        return roundEnded;
+    }
+
+    public boolean isMatchEnded() {
+        return p1RoundWins >= Constants.ROUNDS_TO_WIN ||
+            p2RoundWins >= Constants.ROUNDS_TO_WIN ||
+            (roundEnded && currentRound >= Constants.TOTAL_ROUNDS); // Kết thúc sau hiệp 3 nếu chưa có ai đủ 2 hiệp
+    }
+
+    public void nextRound() {
+        if (isMatchEnded()) return;
+
+        currentRound++;
+        timeLeft = Constants.ROUND_TIME;
+        roundEnded = false;
+    }
+
+    // Getters
+    public int getCurrentRound() { return currentRound; }
+    public float getTimeLeft() { return timeLeft; }
+    public int getP1RoundWins() { return p1RoundWins; }
+    public int getP2RoundWins() { return p2RoundWins; }
+    public void reset() {
+        currentRound = 1;
+        timeLeft = Constants.ROUND_TIME;
+        roundEnded = false;
+        p1RoundWins = 0;
+        p2RoundWins = 0;
+    }}
+</file>
+
+<file path="core/src/main/java/ui/GameHUD.java">
+package ui;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import entity.Fighter;
+import system.RoundSystem;
+import util.Constants;
+
+public class GameHUD {
+    private HealthBar hpBar;
+    private ManaBar manaBar;
+    private BitmapFont roundFont;
+
+    public GameHUD() {
+        hpBar = new HealthBar(Color.RED);
+        manaBar = new ManaBar();
+        roundFont = new BitmapFont();
+        roundFont.getData().setScale(1.1f);
+    }
+
+    public void render(SpriteBatch batch, Fighter p1, Fighter p2, RoundSystem roundSystem) {
+        hpBar.draw(batch, p1.getHp(), Constants.MAX_HP, 50, 650);
+        manaBar.draw(batch, p1.getMana(), 50, 610);
+
+        hpBar.draw(batch, p2.getHp(), Constants.MAX_HP, Constants.APP_WIDTH - 350, 650);
+        manaBar.draw(batch, p2.getMana(), Constants.APP_WIDTH - 350, 610);
+
+        String roundText = "Round " + roundSystem.getCurrentRound() +
+            "  |  Wins: P1 " + roundSystem.getP1RoundWins() + " - " + roundSystem.getP2RoundWins() + " P2";
+        roundFont.draw(batch, roundText, Constants.APP_WIDTH / 2f - 150, 690);
+    }
+
+    public void dispose() {
+        hpBar.dispose();
+        manaBar.dispose();
+        roundFont.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/util/AssetManagerWrapper.java">
+package util;
+
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
+
+public class AssetManagerWrapper {
+    private AssetManager manager = new AssetManager();
+
+    public void loadAssets() {
+        // Nạp các file hiệu ứng
+        manager.load("sounds/punch.mp3", Sound.class);
+        manager.load("sounds/hit.mp3", Sound.class);
+        manager.load("sounds/kick.mp3", Sound.class);
+        manager.load("sounds/glass_break.mp3", Sound.class);
+
+        // GIỮ NGUYÊN TÊN FILE NHẠC NỀN CỦA BẠN
+        manager.load("sounds/bg_music.mp3", Music.class);
+        manager.load("sounds/menu_music.mp3", Music.class);
+
+        manager.finishLoading();
+    }
+
+    public <T> T getAsset(String fileName, Class<T> type) {
+        if (manager.isLoaded(fileName)) {
+            return manager.get(fileName, type);
+        }
+        return null;
+    }
+
+    public void dispose() {
+        manager.dispose();
+    }
+}
+</file>
+
+<file path="python_controller/gesture_recognizer.py">
+class GestureRecognizer:
+    def __init__(self):
+        self.ready_for_next = True
+        self.finger_history = []
+        self.required_frames = 2
+
+    def recognize(self, finger_count):
+        if finger_count == -1: return "IDLE" # Không thấy tay thì về IDLE
+
+        self.finger_history.append(finger_count)
+        if len(self.finger_history) > self.required_frames:
+            self.finger_history.pop(0)
+
+        if len(self.finger_history) == self.required_frames and len(set(self.finger_history)) == 1:
+            stable_count = self.finger_history[0]
+
+            # --- NHÓM TRẠNG THÁI (Gửi liên tục) ---
+            if stable_count == 0:
+                self.ready_for_next = True # Reset để chuẩn bị đấm phát tiếp theo
+                return "IDLE"
+            if stable_count == 3: return "BLOCK"
+            if stable_count == 4: return "DUCK"
+
+            # --- NHÓM CHIÊU THỨC (Chỉ gửi 1 lần duy nhất) ---
+            if self.ready_for_next:
+                if stable_count == 1:
+                    self.ready_for_next = False
+                    return "PUNCH"
+                if stable_count == 2:
+                    self.ready_for_next = False
+                    return "KICK"
+                if stable_count == 5:
+                    self.ready_for_next = False
+                    return "SKILL"
+
+        return "NONE" # Không có thay đổi gì đặc biệt
+</file>
+
+<file path="python_controller/hand_detector.py">
+import cv2
+import mediapipe as mp
+
+# Khởi tạo các công cụ của MediaPipe một lần duy nhất ở cấp độ module
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+
+class HandDetector:
+    def __init__(self):
+        # max_num_hands=2 để AI quét cả 2 vùng màn hình
+        self.hands = mp_hands.Hands(
+            static_image_mode=False,
+            max_num_hands=2,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.7
+        )
+
+    def count_fingers(self, frame):
+        # Reset kết quả là -1 (No Hand) mỗi frame
+        results_dict = {"P1": -1, "P2": -1}
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(img_rgb)
+
+        if results.multi_hand_landmarks:
+            for hand_lms in results.multi_hand_landmarks:
+                # Lấy tọa độ x của cổ tay (Landmark 0) để phân loại P1/P2
+                wrist_x = hand_lms.landmark[0].x
+
+                # PHÂN LOẠI P1/P2 (Fix lỗi ghi đè dữ liệu)
+                # Dựa trên vạch kẻ giữa màn hình (0.5)
+                target_player = "NONE"
+                if wrist_x < 0.5:
+                    target_player = "P1" # Bên trái màn hình
+                else:
+                    target_player = "P2" # Bên phải màn hình
+
+                # Nếu slot người chơi đó đã có tay rồi, thì bỏ qua tay này
+                # Cách này giúp khóa đúng 2 tay ở 2 vùng riêng biệt
+                if results_dict[target_player] != -1:
+                    continue
+
+                # Vẽ xương bàn tay cho người chơi được nhận diện
+                mp_drawing.draw_landmarks(frame, hand_lms, mp_hands.HAND_CONNECTIONS)
+
+                # Logic đếm ngón tay chuẩn: Tip cao hơn PIP (khớp giữa)
+                count = 0
+                # Ngón cái (Landmark 4)
+                if hand_lms.landmark[4].x < hand_lms.landmark[3].x:
+                    count += 1
+
+                # 4 ngón còn lại: Chỉ đếm là MỞ khi đầu ngón (Tip) cao hơn khớp giữa (PIP)
+                finger_tips = [8, 12, 16, 20]
+                for tip in finger_tips:
+                    # y càng nhỏ càng cao
+                    if hand_lms.landmark[tip].y < hand_lms.landmark[tip - 2].y:
+                        count += 1
+
+                results_dict[target_player] = count
+
+        return results_dict
 </file>
 
 <file path="core/src/main/java/controller/FighterController.java">
@@ -1463,7 +3438,6 @@ package controller;
 
 import entity.Fighter;
 import input.InputController;
-import util.Constants;
 import util.Constants.Action;
 
 public abstract class FighterController {
@@ -1476,11 +3450,7 @@ public abstract class FighterController {
     }
 
     public void update(float delta) {
-        // 1. Cập nhật trạng thái input (đọc phím hoặc nhận dữ liệu từ Camera)
         input.update(delta);
-
-        // 2. Kiểm tra lệnh và ra lệnh cho Fighter thực hiện
-        // Thứ tự ưu tiên có thể tùy chỉnh: Skill > Punch > Kick...
         if (input.skill()) {
             fighter.performAction(Action.SKILL);
         } else if (input.punch()) {
@@ -1492,272 +3462,10 @@ public abstract class FighterController {
         } else if (input.block()) {
             fighter.performAction(Action.BLOCK);
         }
+        else fighter.performAction(Action.IDLE);
 
-        // 3. Reset trạng thái input để tránh việc bấm 1 lần mà đấm mãi mãi
         input.reset();
     }
-}
-</file>
-
-<file path="core/src/main/java/controller/P1Controller.java">
-package controller;
-
-import entity.Fighter;
-import input.InputController;
-
-public class P1Controller extends FighterController {
-    public P1Controller(Fighter fighter, InputController input) {
-        super(fighter, input);
-    }
-}
-</file>
-
-<file path="core/src/main/java/controller/P2Controller.java">
-package controller;
-
-import entity.Fighter;
-import input.InputController;
-
-public class P2Controller extends FighterController {
-    public P2Controller(Fighter fighter, InputController input) {
-        super(fighter, input);
-    }
-}
-</file>
-
-<file path="core/src/main/java/entity/Fighter.java">
-package entity;
-
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import util.Constants;
-import util.Constants.Action;
-
-public class Fighter {
-    private Constants.Side side;
-    private Texture texture;
-    private float x, y;
-
-    // --- LOGIC TRẠNG THÁI (MỚI) ---
-    private Action currentState = Action.IDLE; // Mặc định là đứng yên
-    private float stateTimer = 0;              // Đếm thời gian trôi qua của một hành động
-    private final float ACTION_DURATION = 0.5f; // Mỗi cú đấm/đá kéo dài 0.5 giây
-
-    public Fighter(Constants.Side side, String imgPath) {
-        this.side = side;
-        this.texture = new Texture(imgPath);
-        this.y = Constants.GROUND_Y; // Lấy giá trị 100f từ Constants
-
-        // P1 bên trái (25% màn hình), P2 bên phải (75% màn hình)
-        if (side == Constants.Side.LEFT) {
-            this.x = Constants.APP_WIDTH * 0.25f - Constants.CHAR_SIZE / 2;
-        } else {
-            this.x = Constants.APP_WIDTH * 0.75f - Constants.CHAR_SIZE / 2;
-        }
-    }
-
-    /**
-     * Hàm ra lệnh: Khi Controller nhấn phím, nó sẽ gọi hàm này.
-     */
-    public void performAction(Action action) {
-        // Chỉ thực hiện hành động mới nếu đang đứng yên (tránh spam phím)
-        if (this.currentState == Action.IDLE) {
-            this.currentState = action;
-            this.stateTimer = 0; // Reset bộ đếm khi bắt đầu hành động mới
-            System.out.println("[LOG] " + side + " thực hiện: " + action);
-        }
-    }
-
-    /**
-     * Hàm cập nhật: Được gọi liên tục 60 FPS trong GameScreen.
-     */
-    public void update(float delta) {
-        // Nếu không phải đang đứng yên (đang đấm, đá, né...)
-        if (currentState != Action.IDLE) {
-            stateTimer += delta; // Cộng dồn thời gian thực tế
-
-            // Nếu đã thực hiện xong hành động (quá 0.5 giây)
-            if (stateTimer >= ACTION_DURATION) {
-                currentState = Action.IDLE; // Tự động quay về đứng nghỉ
-                stateTimer = 0;
-            }
-        }
-    }
-
-    public void draw(SpriteBatch batch) {
-        // Nếu là P2 (Bên PHẢI) thì lật ngang ảnh (flipX = true) để nhìn sang TRÁI
-        boolean flipX = (side == Constants.Side.RIGHT);
-
-        // Vẽ với kích thước chuẩn 200x200 từ Constants
-        batch.draw(texture,
-            x, y,
-            Constants.CHAR_SIZE, Constants.CHAR_SIZE,
-            0, 0,
-            texture.getWidth(), texture.getHeight(),
-            flipX, false);
-    }
-
-    public void dispose() {
-        texture.dispose();
-    }
-
-    // Getter để các hệ thống khác (như Collision) check trạng thái
-    public Action getCurrentState() {
-        return currentState;
-    }
-}
-</file>
-
-<file path="core/src/main/java/screen/GameOverScreen.java">
-package screen;
-
-import com.badlogic.gdx.ScreenAdapter;
-
-public class GameOverScreen extends ScreenAdapter {
-}
-</file>
-
-<file path="core/src/main/java/screen/MenuScreen.java">
-package screen;
-
-import com.badlogic.gdx.ScreenAdapter;
-
-public class MenuScreen extends ScreenAdapter {
-}
-</file>
-
-<file path="core/src/main/java/sound/SoundManager.java">
-package sound;
-
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.audio.Music;
-import com.badlogic.gdx.audio.Sound;
-
-public class SoundManager {
-
-    private Music backgroundMusic;
-
-    private Sound punchSound;
-    private Sound hitSound;
-
-    public void load() {
-        backgroundMusic = Gdx.audio.newMusic(
-            Gdx.files.internal("sounds/bg_music.mp3")
-        );
-
-        punchSound = Gdx.audio.newSound(
-            Gdx.files.internal("sounds/punch.mp3")
-        );
-
-        hitSound = Gdx.audio.newSound(
-            Gdx.files.internal("sounds/hit.mp3")
-        );
-    }
-
-    public void playMusic() {
-        backgroundMusic.setLooping(true);
-        backgroundMusic.setVolume(0.5f);
-        backgroundMusic.play();
-    }
-
-    public void playPunch() {
-        punchSound.play(1.0f);
-    }
-
-    public void playHit() {
-        hitSound.play(1.0f);
-    }
-
-    public void dispose() {
-        backgroundMusic.dispose();
-        punchSound.dispose();
-        hitSound.dispose();
-    }
-}
-</file>
-
-<file path="core/src/main/java/util/Constants.java">
-package util;
-
-public final class Constants {
-
-    private Constants() {}
-
-    // --- CẤU HÌNH HỆ THỐNG ---
-    public static final String GAME_TITLE = "HUST Boxingame";
-    public static final int APP_WIDTH     = 1280;
-    public static final int APP_HEIGHT    = 720;
-    public static final int TARGET_FPS    = 60;
-
-    // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
-    public static final int   MAX_HP            = 20;    // Đấm 20 phát là đi
-    public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
-    public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
-    public static final float CHAR_SIZE         = 200f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
-
-    // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
-    public static final float DAMAGE_PUNCH      = 1f;
-    public static final float DAMAGE_KICK       = 1f;
-    public static final float DAMAGE_SKILL      = 5f;
-
-    // --- CHỈ SỐ NĂNG LƯỢNG ---
-    public static final float MANA_GAIN_PER_HIT = 1f;    // Trúng 1 đòn hồi 1 mana
-    public static final float MANA_COST_SKILL   = 10f;
-
-    // --- THÔNG SỐ TRẬN ĐẤU ---
-    public static final float ROUND_TIME        = 180f;
-    public static final int   PORT_UDP_PYTHON   = 5005;
-
-    // --- 5 HÀNH ĐỘNG DUY NHẤT ---
-    public enum Action {
-        IDLE,       // Đứng yên
-        PUNCH,      // Kỹ năng 1
-        KICK,       // Kỹ năng 2
-        DUCK,       // Kỹ năng 3 (Né đòn cao)
-        BLOCK,      // Kỹ năng 4 (Giảm dame/Vô hiệu hóa)
-        SKILL,      // Tuyệt kỹ (Dùng khi đủ 10 mana)
-        HIT,        // Bị dính đòn (Trạng thái thụ động)
-        DEAD        // Thua
-    }
-
-    public enum Side { LEFT, RIGHT }
-    public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }
-
-    // --- ASSETS PATHS ---
-    public static final String TEXTURE_ATLAS = "images/boxing_game.atlas";
-    public static final String BG_GAME       = "images/background/arena_bg.png";
-    public static final String SFX_PUNCH     = "sounds/sfx/punch.mp3";
-    public static final String SFX_KICK      = "sounds/sfx/kick.wav";
-    public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
-    public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
-}
-</file>
-
-<file path="core/src/main/java/input/InputController.java">
-package input;
-
-public interface InputController {
-
-    boolean kick();
-
-    boolean duck();  //cúi xuống
-
-    boolean punch();
-
-    boolean block();
-
-    boolean skill();
-
-    /**
-     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
-     */
-    void update(float delta);
-
-    /**
-     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
-     */
-    void reset();
-
 }
 </file>
 
@@ -1788,57 +3496,205 @@ public class KeyboardInput implements InputController {
     @Override public boolean duck() { return isD; }
     @Override public boolean block() { return isB; }
     @Override public boolean skill() { return isS; }
+
+    @Override
+    public String getNextAction() {
+        return "";
+    }
+
     @Override public void reset() { isP = isK = isS = false; }
 }
 </file>
 
-<file path="core/src/main/java/screen/GameScreen.java">
+<file path="core/src/main/java/input/InputController.java">
+package input;
+
+public interface InputController {
+
+    boolean kick();
+
+    boolean duck();  //cúi xuống
+
+    boolean punch();
+
+    boolean block();
+
+    boolean skill();
+
+    /**
+     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
+     */
+    String getNextAction();
+
+    void update(float delta);
+
+    /**
+     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
+     */
+    void reset();
+
+}
+</file>
+
+<file path="core/src/main/java/screen/GameOverScreen.java">
 package screen;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import main.Main;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import entity.Fighter;
+import main.Main;
+import system.RoundSystem;
 import util.Constants;
 
-public class GameScreen extends ScreenAdapter {
-    private final Main game;
-    private Texture background;
-    private Fighter p1, p2;
+public class GameOverScreen extends ScreenAdapter {
 
-    public GameScreen(Main game) {
+    private final Game game;
+    private final Fighter p1;
+    private final Fighter p2;
+    private final RoundSystem roundSystem;
+    private final SpriteBatch batch;
+    private final BitmapFont bigFont;
+    private final BitmapFont smallFont;
+    private String currentMode;
+
+    public GameOverScreen(Game game, Fighter p1, Fighter p2, RoundSystem roundSystem, SpriteBatch batch,String mode) {
         this.game = game;
-        // Load lại cái nền xịn của ông giáo
-        background = new Texture("images/background/background.jpg");
+        this.p1 = p1;
+        this.p2 = p2;
+        this.currentMode = mode;
+        this.roundSystem = roundSystem;
+        this.batch = batch;
+        this.bigFont = new BitmapFont();
+        this.smallFont = new BitmapFont();
 
-        // Khởi tạo 2 Ronaldo đối đầu
-        p1 = new Fighter(Constants.Side.LEFT, "images/p1/idle.png");
-        p2 = new Fighter(Constants.Side.RIGHT, "images/p2/idle.png");
+        bigFont.getData().setScale(2.5f);   // chữ to hơn
+        smallFont.getData().setScale(1.2f);
     }
 
     @Override
     public void render(float delta) {
-        // Xóa màn hình
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        game.batch.begin();
-        // 1. Vẽ nền trước (Phủ kín màn hình 1280x720)
-        game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+        batch.begin();
 
-        // 2. Vẽ 2 võ sĩ (Tự động đứng đúng chỗ và đối mặt nhau)
-        p1.draw(game.batch);
-        p2.draw(game.batch);
+        // === TIÊU ĐỀ ===
+        bigFont.draw(batch, "GAME OVER", Constants.APP_WIDTH / 2f - 140, 520);
 
-        game.batch.end();
+        // === KẾT QUẢ ===
+        String resultText;
+        if (roundSystem.getP1RoundWins() > roundSystem.getP2RoundWins()) {
+            resultText = "P1 WINS MATCH!";
+        } else if (roundSystem.getP2RoundWins() > roundSystem.getP1RoundWins()) {
+            resultText = "P2 WINS MATCH!";
+        } else {
+            resultText = "DRAW MATCH";
+        }
+
+        bigFont.draw(batch, resultText, Constants.APP_WIDTH / 2f - 110, 410);
+
+        // === HP ===
+        smallFont.draw(batch, "P1 Final HP : " + p1.getHp(), 380, 300);
+        smallFont.draw(batch, "P2 Final HP : " + p2.getHp(), 680, 300);
+        smallFont.draw(batch,
+            "Round Score: P1 " + roundSystem.getP1RoundWins() + " - " + roundSystem.getP2RoundWins() + " P2",
+            Constants.APP_WIDTH / 2f - 160, 260);
+
+        // === Hướng dẫn ===
+        smallFont.draw(batch, "Press [ R ] Play Again  |  [ ESC ] Menu", Constants.APP_WIDTH / 2f - 200, 180);
+
+        batch.end();
+
+        // Restart khi bấm R
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            p1.reset();
+            p2.reset();
+            roundSystem.reset();
+            game.setScreen(new GameScreen((Main) game, currentMode));
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame((Main) game));
+        }
     }
 
     @Override
     public void dispose() {
-        background.dispose();
-        p1.dispose();
-        p2.dispose();
+        bigFont.dispose();
+        smallFont.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/sound/SoundManager.java">
+package sound;
+
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
+import util.AssetManagerWrapper;
+
+public class SoundManager {
+    private Sound punch, kick, hit, glassBreak;
+    private Music bgMusic, menuMusic;
+    private AssetManagerWrapper wrapper;
+
+    // GIỮ TÊN HÀM load() để file Main.java không bị lỗi
+    public void load() {
+        if (wrapper == null) {
+            wrapper = new AssetManagerWrapper();
+            wrapper.loadAssets();
+        }
+
+        this.punch = wrapper.getAsset("sounds/punch.mp3", Sound.class);
+        this.kick = wrapper.getAsset("sounds/kick.mp3", Sound.class);
+        this.hit = wrapper.getAsset("sounds/hit.mp3", Sound.class);
+        this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
+        this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
+        this.menuMusic = wrapper.getAsset("sounds/menu_music.mp3", Music.class);
+    }
+
+    // GIỮ TÊN HÀM playMusic() để file GameScreen.java của bạn HẾT LỖI ĐỎ
+    public void playMusic() {
+        if (bgMusic != null) {
+            bgMusic.setLooping(true);
+            bgMusic.play();
+        }
+    }
+
+    public void playMenuMusic() {
+        if (menuMusic != null) {
+            menuMusic.setLooping(true);
+            menuMusic.setVolume(0.5f);
+            menuMusic.play();
+        }
+    }
+
+    public void stopMenuMusic() {
+        if (menuMusic != null && menuMusic.isPlaying()) {
+            menuMusic.stop();
+        }
+    }
+
+    // Hàm này dự phòng nếu có file khác gọi tên dài hơn
+    public void playBackgroundMusic() {
+        playMusic();
+    }
+
+    public void playPunch() { if (punch != null) punch.play(); }
+    public void playKick() { if (kick != null) kick.play(); }
+    public void playHit() { if (hit != null) hit.play(); }
+    public void playGlassBreak() { if (glassBreak != null) glassBreak.play(); }
+
+    public void stopBackgroundMusic() {
+        if (bgMusic != null && bgMusic.isPlaying()) {
+            bgMusic.stop();
+        }
+    }
+
+    public void dispose() {
+        if (wrapper != null) wrapper.dispose();
     }
 }
 </file>
@@ -1863,13 +3719,16 @@ public class Lwjgl3Launcher {
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
+
         configuration.setTitle("BoxingGame");
         //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
         //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
         configuration.useVsync(true);
         //// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
         //// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
-        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
+        int refreshRate = Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate;
+        configuration.setForegroundFPS(refreshRate > 0 ? refreshRate : 60);
+        configuration.setIdleFPS(30);
         //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
@@ -1890,6 +3749,1033 @@ public class Lwjgl3Launcher {
 //        configuration.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20, 0, 0);
 
         return configuration;
+    }
+}
+</file>
+
+<file path="python_controller/main.py">
+import cv2
+import os
+import socket
+import sys
+import time
+
+# Anchor paths so running from IDE, script, or bundled exe still works.
+if getattr(sys, "frozen", False):
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def resolve_project_root():
+    # Installed layout: app root contains assets and AI_Controller.exe.
+    if os.path.exists(os.path.join(SCRIPT_DIR, "assets")):
+        return SCRIPT_DIR
+
+    # Dev layout: this file sits under python_controller/ and assets is one level up.
+    parent = os.path.dirname(SCRIPT_DIR)
+    if os.path.exists(os.path.join(parent, "assets")):
+        return parent
+
+    return SCRIPT_DIR
+
+PROJECT_ROOT = resolve_project_root()
+ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from hand_detector import HandDetector
+from gesture_recognizer import GestureRecognizer
+from pose_detector import PoseDetector
+from pose_gesture_recognizer import PoseGestureRecognizer
+
+STATE_ACTIONS = {"IDLE", "BLOCK", "DUCK"}
+STATE_RESEND_INTERVAL = 0.08  # ~12.5 Hz
+NONE_TO_IDLE_TIMEOUT = 0.30
+DEBUG_SEND = False
+
+
+def send_action(conn, player_tag, action, cache):
+    now = time.monotonic()
+    last_action = cache[player_tag]["action"]
+    last_time = cache[player_tag]["time"]
+
+    # Burst gestures must always pass through; posture states are sent only on change/throttled.
+    if action in STATE_ACTIONS and action == last_action and (now - last_time) < STATE_RESEND_INTERVAL:
+        return True
+
+    msg = f"{player_tag}:{action}\n"
+    try:
+        conn.sendall(msg.encode("utf-8"))
+    except (socket.timeout, BlockingIOError):
+        # Under burst movement, drop stale frame command and keep loop running.
+        return True
+    except (BrokenPipeError, ConnectionResetError, OSError):
+        return False
+
+    cache[player_tag]["action"] = action
+    cache[player_tag]["time"] = now
+
+    if DEBUG_SEND:
+        print(f"SENDING: {msg.strip()}")
+
+    return True
+
+def main():
+    mode = "CAMERA_AI"
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].strip().upper()
+
+    # 1. --- SETUP SOCKET ---
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Cho phép chạy lại server ngay lập tức nếu bị crash (tránh lỗi Address already in use)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(('127.0.0.1',65432))
+    server_socket.listen(1)
+
+    print("Python: [WAITING] Dang doi Java ket noi...")
+    conn, addr = server_socket.accept()
+    conn.settimeout(0.03)
+    print(f"Python: [CONNECTED] Da ket noi voi Java tai {addr}")
+
+    # 2. --- KHOI TAO CAMERA & AI ---
+    cap = cv2.VideoCapture(0)
+    detector = None
+    recognizer_p1 = None
+    recognizer_p2 = None
+
+    if mode == "CAMERA_POSE":
+        detector = PoseDetector()
+        recognizer_p1 = PoseGestureRecognizer()
+        recognizer_p2 = PoseGestureRecognizer()
+    else:
+        detector = HandDetector()
+        # Tao 2 thuc the rieng biet de khong bi lan lon lich su ngon tay cua 2 nguoi
+        recognizer_p1 = GestureRecognizer()
+        recognizer_p2 = GestureRecognizer()
+    send_cache = {
+        "P1": {"action": None, "time": 0.0},
+        "P2": {"action": None, "time": 0.0}
+    }
+    last_non_none_time = {"P1": time.monotonic(), "P2": time.monotonic()}
+
+    try:
+        while True:
+            success, frame = cap.read()
+            if not success: break
+
+            # Lat anh (Mirror effect) de nguoi choi dieu khien de hon
+            frame = cv2.flip(frame, 1)
+            h, w, _ = frame.shape
+
+            # 3. --- NHAN DIEN ---
+            if mode == "CAMERA_POSE":
+                pose_results = detector.detect(frame)
+                gesture_p1 = recognizer_p1.recognize(pose_results["P1"])
+                gesture_p2 = recognizer_p2.recognize(pose_results["P2"])
+            else:
+                # results se la dict: {"P1": count, "P2": count}
+                results = detector.count_fingers(frame)
+                gesture_p1 = recognizer_p1.recognize(results["P1"])
+                gesture_p2 = recognizer_p2.recognize(results["P2"])
+
+            now = time.monotonic()
+            if gesture_p1 != "NONE":
+                last_non_none_time["P1"] = now
+            elif now - last_non_none_time["P1"] > NONE_TO_IDLE_TIMEOUT:
+                gesture_p1 = "IDLE"
+
+            if gesture_p2 != "NONE":
+                last_non_none_time["P2"] = now
+            elif now - last_non_none_time["P2"] > NONE_TO_IDLE_TIMEOUT:
+                gesture_p2 = "IDLE"
+
+            # --- XU LY PLAYER 1 (Ben trai) ---
+            if gesture_p1 != "NONE":
+                if not send_action(conn, "P1", gesture_p1, send_cache):
+                    break
+                cv2.putText(frame, f"P1: {gesture_p1}", (50, 100),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+
+            # --- XU LY PLAYER 2 (Ben phai) ---
+            if gesture_p2 != "NONE":
+                if not send_action(conn, "P2", gesture_p2, send_cache):
+                    break
+                cv2.putText(frame, f"P2: {gesture_p2}", (w//2 + 50, 100),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+
+            # 4. --- HIEN THI GUI ---
+            # Ve vach ke chia doi man hinh
+            cv2.line(frame, (w//2, 0), (w//2, h), (255, 255, 0), 2)
+            cv2.putText(frame, "P1 AREA", (w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(frame, "P2 AREA", (3*w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+            cv2.putText(frame, f"MODE: {mode}", (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            cv2.imshow("Boxing AI - 2 Players Mode", frame)
+
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
+        print(f"Loi ket noi socket: {e}")
+    except Exception as e:
+        print(f"Loi: {e}")
+    finally:
+        print("Python: Dang dong ket noi...")
+        conn.close()
+        server_socket.close()
+        cap.release()
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="core/src/main/java/util/Constants.java">
+package util;
+
+import com.badlogic.gdx.Input;
+
+public final class Constants {
+
+    private Constants() {}
+
+    // --- CẤU HÌNH HỆ THỐNG ---
+    public static final String GAME_TITLE = "HUST Boxingame";
+    public static final int APP_WIDTH     = 1280;
+    public static final int APP_HEIGHT    = 720;
+    public static final int TARGET_FPS    = 60;
+
+    // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
+    public static final int   MAX_HP            = 30;    // Đấm 20 phát là đi
+    public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
+    public static final float GROUND_Y          = 40f;  // Đứng cố định trên sàn
+    public static final float CHAR_SIZE         = 520f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
+
+    // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
+    public static final float DAMAGE_PUNCH      = 1f;
+    public static final float DAMAGE_KICK       = 1f;
+    public static final float DAMAGE_SKILL      = 5f;
+
+    // --- CHỈ SỐ NĂNG LƯỢNG ---
+    public static final float MANA_GAIN_PER_HIT = 1f;    // Trúng 1 đòn hồi 1 mana
+    public static final float MANA_COST_SKILL   = 10f;
+
+    // --- THÔNG SỐ TRẬN ĐẤU ---
+    public static final float ROUND_TIME        = 180f;
+    public static final int   PORT_UDP_PYTHON   = 5005;
+
+    // --- 5 HÀNH ĐỘNG DUY NHẤT ---
+    public enum Action {
+        IDLE,       // Đứng yên
+        PUNCH,      // Kỹ năng 1
+        KICK,       // Kỹ năng 2
+        DUCK,       // Kỹ năng 3 (Né đòn cao)
+        BLOCK,      // Kỹ năng 4 (Giảm dame/Vô hiệu hóa)
+        SKILL,      // Tuyệt kỹ (Dùng khi đủ 10 mana)
+        HIT,        // Bị dính đòn (Trạng thái thụ động)
+        DEAD        // Thua
+    }
+    public enum ControlMode {
+        KEYBOARD,
+        CAMERA_AI,
+        CAMERA_POSE
+    }
+
+    // Thêm vào Constants.java
+    public enum Side { LEFT, RIGHT }
+    public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }
+
+    // --- ASSETS PATHS ---
+    public static final String TEXTURE_ATLAS = "images/boxing_game.atlas";
+    public static final String BG_GAME       = "images/background/arena_bg.png";
+    public static final String SFX_PUNCH     = "sounds/sfx/punch.mp3";
+    public static final String SFX_KICK      = "sounds/sfx/kick.wav";
+    public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
+    public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
+    public static final String SKILL_VIDEO_P1 = "videos/skill/skill_p1.mp4";
+    public static final String SKILL_VIDEO_P2 = "videos/skill/skill_p2.mp4";
+    public static final float SKILL_CUTSCENE_MIN_SECONDS = 1.2f;
+    public static final float SKILL_CUTSCENE_AUTO_RETURN_SECONDS = 4.5f;
+    public static final float SKILL_CUTSCENE_TARGET_SECONDS = 6.0f;
+    public static final int   TOTAL_ROUNDS      = 3;
+    public static final int   ROUNDS_TO_WIN     = 2;
+    public static final int   WIN_POINTS        = 1;
+}
+</file>
+
+<file path="core/src/main/java/screen/MenuGame.java">
+package screen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import main.Main;
+import ui.Manual;
+import util.Constants;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+public class MenuGame extends ScreenAdapter {
+    private final Main game;
+    private Texture background;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private ShapeRenderer shapeRenderer;
+    private boolean isFightOptionsVisible = false; // Trạng thái hiện bảng chọn Mode
+    private String[] fightOptions = {"KEYBOARD", "CAMERA AI", "CAMERA POSE"};
+    private int fightSelected = 0; // Biến chọn riêng cho bảng này
+
+
+    // 5 mục menu
+    private String[] menuItems = {"FIGHT", "GYM", "MANUAL", "SETTINGS", "QUIT GAME"};
+    private int selected = 0;
+
+    // Trạng thái hiển thị Overlay
+    private boolean isManualVisible = false;
+    private boolean isSettingsVisible = false;
+    private final Manual manualUI;
+
+    public MenuGame(Main game) {
+        this.game = game;
+        background = new Texture("images/background/background2.png");
+        font = createReadableFont();
+        font.getData().setScale(2f);
+        layout = new GlyphLayout();
+        shapeRenderer = new ShapeRenderer();
+        manualUI = new Manual();
+    }
+
+    private BitmapFont createReadableFont() {
+        String[] windowsFonts = {
+            "C:/Windows/Fonts/arial.ttf",
+            "C:/Windows/Fonts/segoeui.ttf"
+        };
+
+        for (String fontPath : windowsFonts) {
+            try {
+                if (java.nio.file.Files.exists(java.nio.file.Paths.get(fontPath))) {
+                    FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.absolute(fontPath));
+                    FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+                    parameter.size = 20;
+                    parameter.minFilter = Texture.TextureFilter.Linear;
+                    parameter.magFilter = Texture.TextureFilter.Linear;
+                    parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
+                        + "ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠ"
+                        + "àáâãèéêìíòóôõùúăđĩũơ"
+                        + "ƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềể"
+                        + "ỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừ"
+                        + "ỬỮỰỲỴỶỸửữựỳỵỷỹ";
+                    BitmapFont generated = generator.generateFont(parameter);
+                    generator.dispose();
+                    return generated;
+                }
+            } catch (Exception ignored) {
+                // Fallback to default bitmap font if system TTF cannot be loaded.
+            }
+        }
+
+        return new BitmapFont();
+    }
+
+    @Override
+    public void show() {
+        shutdownCameraRuntime();
+        if(game.soundManager != null){
+            game.soundManager.playMenuMusic();
+        }
+    }
+
+    private void shutdownCameraRuntime() {
+        input.GestureReceiver.getInstance().stop();
+        ProcessHandle.allProcesses()
+            .filter(process -> process.info().command()
+                .map(command -> command.toLowerCase().endsWith("ai_controller.exe"))
+                .orElse(false))
+            .forEach(process -> {
+                if (!process.destroy() || process.isAlive()) {
+                    process.destroyForcibly();
+                }
+            });
+    }
+
+    @Override
+    public void render(float delta) {
+        // 1. XỬ LÝ LOGIC ĐIỀU KHIỂN
+        handleInput();
+
+        // 2. XÓA MÀN HÌNH
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // --- VẼ BACKGROUND ---
+        game.batch.begin();
+        game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+        game.batch.end();
+
+        // --- VẼ KHUNG MENU VÀ NÚT ---
+        drawMenuUI();
+
+        // --- VẼ OVERLAY (MANUAL HOẶC SETTINGS) ---
+        if (isManualVisible) {
+            drawManualOverlay();
+        } else if (isSettingsVisible) {
+            drawSettingsOverlay();
+        }
+        else if (isFightOptionsVisible) drawFightOptionsOverlay();
+    }
+
+    private void handleInput() {
+        // Nếu đang hiện Manual hoặc Settings, nhấn ESC để quay lại
+        if (isManualVisible || isSettingsVisible || isFightOptionsVisible) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                isManualVisible = isSettingsVisible = isFightOptionsVisible = false;
+                return;
+            }
+
+            if (isManualVisible) {
+                manualUI.handleTabInput();
+                return;
+            }
+
+            // Điều khiển trong bảng chọn Mode
+            if (isFightOptionsVisible) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+                    fightSelected = (fightSelected - 1 + fightOptions.length) % fightOptions.length;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+                    fightSelected = (fightSelected + 1) % fightOptions.length;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                    if (fightSelected == 1) {
+                        input.GestureReceiver.getInstance().start();
+                        startPythonAI("CAMERA_AI");
+                        game.setScreen(new GameScreen(game, "CAMERA_AI"));
+                    } else if (fightSelected == 2) {
+                        input.GestureReceiver.getInstance().start();
+                        startPythonAI("CAMERA_POSE");
+                        game.setScreen(new GameScreen(game, "CAMERA_POSE"));
+                    } else {
+                        game.setScreen(new GameScreen(game, "KEYBOARD"));
+                    }
+                }
+            }
+            return;
+        }
+
+        // Điều khiển lên xuống
+        if (Gdx.input.isKeyJustPressed(Input.Keys.W) || Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            selected = (selected - 1 + menuItems.length) % menuItems.length;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.S) || Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            selected = (selected + 1) % menuItems.length;
+        }
+
+        // Xử lý khi nhấn ENTER
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            switch (selected) {
+                case 0: // FIGHT
+                    isFightOptionsVisible = true;
+                    break;
+                case 1: // GYM
+                    game.setScreen(new GymScreen(game));
+                    break;
+                case 2: // MANUAL
+                    manualUI.reset();
+                    isManualVisible = true;
+                    break;
+                case 3: // SETTINGS
+                    isSettingsVisible = true;
+                    break;
+                case 4: // QUIT GAME
+                    Gdx.app.exit();
+                    break;
+            }
+        }
+    }
+    private void drawFightOptionsOverlay() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.85f);
+        shapeRenderer.rect(Constants.APP_WIDTH/2f - 230, 220, 460, 320);
+
+        // Highlight mục được chọn trong bảng Mode
+        shapeRenderer.setColor(Color.FIREBRICK);
+        float highlightY = 440 - fightSelected * 70;
+        shapeRenderer.rect(Constants.APP_WIDTH/2f - 200, highlightY, 400, 50);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        drawCenter(game.batch, "SELECT CONTROL MODE", Constants.APP_WIDTH, 520, Color.GOLD);
+        drawCenter(game.batch, "KEYBOARD (Classic)", Constants.APP_WIDTH, 475, Color.WHITE);
+        drawCenter(game.batch, "CAMERA AI (Finger)", Constants.APP_WIDTH, 405, Color.WHITE);
+        drawCenter(game.batch, "CAMERA POSE (Upper Body)", Constants.APP_WIDTH, 335, Color.WHITE);
+        drawCenter(game.batch, "Press ESC to Cancel", Constants.APP_WIDTH, 230, Color.GRAY);
+        game.batch.end();
+    }
+
+    private void drawMenuUI() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapeRenderer.setProjectionMatrix(game.batch.getProjectionMatrix());
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Overlay tối cho toàn màn hình
+        shapeRenderer.setColor(0, 0, 0, 0.5f);
+        shapeRenderer.rect(0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+
+        float menuX = Constants.APP_WIDTH / 2f - 160;
+        float menuY = 200;
+
+        // Khung Menu chính
+        shapeRenderer.setColor(new Color(30/255f, 30/255f, 40/255f, 1f));
+        shapeRenderer.rect(menuX, menuY, 320, 390);
+
+        // Highlight mục được chọn
+        shapeRenderer.setColor(new Color(180/255f, 30/255f, 30/255f, 1f));
+        float btnY = menuY + 305 - selected * 70;
+        shapeRenderer.rect(menuX + 20, btnY - 5, 280, 50);
+
+        shapeRenderer.end();
+
+        game.batch.begin();
+        font.getData().setScale(4f);
+        drawCenter(game.batch, "BOXING GAME", Constants.APP_WIDTH, 650, Color.GOLD);
+
+        font.getData().setScale(2f);
+        for (int i = 0; i < menuItems.length; i++) {
+            float textY = menuY + 340 - i * 70;
+            drawCenter(game.batch, menuItems[i], Constants.APP_WIDTH, textY, Color.WHITE);
+        }
+        game.batch.end();
+    }
+
+    private void drawManualOverlay() {
+        manualUI.draw(shapeRenderer, game.batch, font);
+    }
+
+    private void drawSettingsOverlay() {
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(20/255f, 20/255f, 30/255f, 0.95f);
+        shapeRenderer.rect(200, 150, Constants.APP_WIDTH - 400, Constants.APP_HEIGHT - 300);
+        shapeRenderer.end();
+
+        game.batch.begin();
+        drawCenter(game.batch, "--- SETTINGS ---", Constants.APP_WIDTH, 500, Color.ORANGE);
+        drawCenter(game.batch, "Audio Volume: 100% (Coming Soon)", Constants.APP_WIDTH, 400, Color.WHITE);
+        drawCenter(game.batch, "Press ESC to go back", Constants.APP_WIDTH, 250, Color.GRAY);
+        game.batch.end();
+    }
+
+
+    private void drawCenter(com.badlogic.gdx.graphics.g2d.SpriteBatch batch, String text, float width, float y, Color color) {
+        layout.setText(font, text);
+        font.setColor(color);
+        float x = (width - layout.width) / 2;
+        font.draw(batch, text, x, y);
+    }
+    private void startPythonAI(String aiMode) {
+        Thread pythonThread = new Thread(() -> {
+            try {
+                Path appRoot = resolveAppRoot();
+                Path packagedExe = appRoot.resolve("AI_Controller.exe");
+                Path pythonControllerDir = appRoot.resolve("python_controller");
+                Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
+                Path scriptPath = pythonControllerDir.resolve("main.py");
+
+                Process process;
+                if (Files.exists(packagedExe)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExe.toString(), aiMode);
+                    exePb.directory(appRoot.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    process = exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
+                } else if (Files.exists(packagedExeInDev)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExeInDev.toString(), aiMode);
+                    exePb.directory(pythonControllerDir.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    process = exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
+                } else {
+                    if (!Files.exists(scriptPath)) {
+                        System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
+                        return;
+                    }
+
+                    String pythonExe = resolvePythonExecutable(appRoot);
+                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), aiMode);
+                    // Dung folder python_controller lam cwd de import module noi bo on dinh.
+                    pb.directory(pythonControllerDir.toFile());
+                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+
+                    try {
+                        process = pb.start();
+                    } catch (Exception firstError) {
+                        // Fallback for Windows machines that have Python launcher but no PATH alias "python".
+                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), aiMode);
+                        fallbackPb.directory(pythonControllerDir.toFile());
+                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        process = fallbackPb.start();
+                    }
+                    System.out.println("[System] Da tu dong kick-start Python AI!");
+                }
+
+                // (Tùy chọn) Đọc log từ Python nếu ông giáo muốn debug ngay trong Console của Java
+            /*
+            java.util.Scanner s = new java.util.Scanner(process.getInputStream());
+            while (s.hasNextLine()) System.out.println("Python: " + s.nextLine());
+            */
+
+            } catch (Exception e) {
+                System.err.println("[Lỗi System] Khong the tu dong bat Python: " + e.getMessage());
+            }
+        });
+        pythonThread.setDaemon(true);
+        pythonThread.start();
+    }
+
+    private Path resolveAppRoot() {
+        Path runtimeBase = resolveRuntimeBaseDir();
+        if (runtimeBase != null && isAppRoot(runtimeBase)) {
+            return runtimeBase;
+        }
+
+        Path dir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+
+        // user.dir may point to module folders (e.g. /core or /lwjgl3) when run from IDE/Gradle.
+        for (int i = 0; i < 6 && dir != null; i++) {
+            if (isAppRoot(dir)) {
+                return dir;
+            }
+            dir = dir.getParent();
+        }
+
+        return Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+    }
+
+    private Path resolveRuntimeBaseDir() {
+        try {
+            Path codePath = Paths.get(MenuGame.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .toAbsolutePath().normalize();
+            return Files.isRegularFile(codePath) ? codePath.getParent() : codePath;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean isAppRoot(Path dir) {
+        if (dir == null) return false;
+        return Files.exists(dir.resolve("AI_Controller.exe"))
+            || Files.exists(dir.resolve("python_controller").resolve("main.py"));
+    }
+
+    private String resolvePythonExecutable(Path appRoot) {
+        String pythonFromEnv = System.getenv("PYTHON_EXE");
+        if (pythonFromEnv != null && !pythonFromEnv.trim().isEmpty()) {
+            return pythonFromEnv.trim();
+        }
+
+        Path venvPython = appRoot.resolve(".venv").resolve("Scripts").resolve("python.exe");
+        if (Files.exists(venvPython)) {
+            return venvPython.toString();
+        }
+
+        return "python";
+    }
+
+
+    @Override
+    public void dispose() {
+        background.dispose();
+        font.dispose();
+        shapeRenderer.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/screen/GameScreen.java">
+package screen;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import controller.P1Controller;
+import controller.P2Controller;
+import effect.EffectManager;
+import input.GestureReceiver;
+import input.KeyboardInput;
+import main.Main;
+import entity.Fighter;
+import system.CombatSystem;
+import ui.GameHUD;
+import util.Constants;
+import system.GameStateManager;
+import system.RoundSystem;
+
+public class GameScreen extends ScreenAdapter {
+    private CombatSystem combatSystem;
+    private GameHUD hud;
+    private final Main game;
+    private Texture background;
+    private Fighter p1, p2;
+    private EffectManager effectManager;
+    private P1Controller p1Controller;
+    private P2Controller p2Controller;
+    private String controlMode;
+
+    private RoundSystem roundSystem;
+    private GameStateManager gameStateManager;
+
+    public GameScreen(Main game, String mode) {
+        this.game = game;
+        this.controlMode = mode;
+        background = new Texture("images/background/background.jpg");
+        effectManager = new EffectManager();
+        effectManager.load();
+        hud = new GameHUD();
+        combatSystem = new CombatSystem(effectManager, game.soundManager);
+        p1 = new Fighter(Constants.Side.LEFT, "images/p1",mode);
+        p2 = new Fighter(Constants.Side.RIGHT, "images/p2", mode);
+        roundSystem = new RoundSystem();
+        gameStateManager = new GameStateManager(game,mode);
+    }
+
+    @Override
+    public void render(float delta) {
+        if (p1Controller != null) p1Controller.update(delta);
+        if (p2Controller != null) p2Controller.update(delta);
+        p1.update(delta);
+        p2.update(delta);
+        combatSystem.update(p1, p2);
+        roundSystem.update(delta, p1, p2);
+
+        if (showSkillCutsceneIfNeeded()) {
+            return;
+        }
+
+        if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
+            p1.reset();
+            p2.reset();
+            roundSystem.nextRound();
+        }
+
+        gameStateManager.update(p1, p2, roundSystem);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        game.batch.begin();
+        game.batch.draw(background, 0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
+        p1.draw(game.batch);
+        p2.draw(game.batch);
+        effectManager.draw(game.batch, delta);
+        hud.render(game.batch, p1, p2, roundSystem);
+        game.batch.end();
+    }
+
+    private boolean showSkillCutsceneIfNeeded() {
+        if (p1.consumeSkillCutsceneTrigger()) {
+            game.setScreen(new SkillCutsceneScreen(game, this, Constants.SKILL_VIDEO_P1, "P1 SKILL"));
+            return true;
+        }
+
+        if (p2.consumeSkillCutsceneTrigger()) {
+            game.setScreen(new SkillCutsceneScreen(game, this, Constants.SKILL_VIDEO_P2, "P2 SKILL"));
+            return true;
+        }
+
+        return false;
+    }
+    @Override
+    public void show() {
+        GestureReceiver.getInstance().start();
+        game.soundManager.playMusic();
+        KeyboardInput p1Input = new KeyboardInput(
+            com.badlogic.gdx.Input.Keys.D,
+            com.badlogic.gdx.Input.Keys.A,
+            com.badlogic.gdx.Input.Keys.S,
+            com.badlogic.gdx.Input.Keys.W,
+            com.badlogic.gdx.Input.Keys.SPACE
+        );
+        p1Controller = new P1Controller(p1, p1Input);
+        KeyboardInput p2Input = new KeyboardInput(
+            com.badlogic.gdx.Input.Keys.RIGHT,
+            com.badlogic.gdx.Input.Keys.LEFT,
+            com.badlogic.gdx.Input.Keys.DOWN,
+            com.badlogic.gdx.Input.Keys.UP,
+            com.badlogic.gdx.Input.Keys.ENTER
+        );
+        p2Controller = new P2Controller(p2, p2Input);
+    }
+
+    @Override
+    public void dispose() {
+        background.dispose();
+        p1.dispose();
+        p2.dispose();
+        effectManager.dispose();
+        hud.dispose();
+    }
+}
+</file>
+
+<file path="core/src/main/java/entity/Fighter.java">
+package entity;
+
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import entity.component.FighterStats;
+import input.GestureReceiver;
+import util.Constants;
+import util.Constants.Action;
+import java.util.HashMap;
+import java.util.Map;
+import static util.Constants.Action.*;
+
+public class Fighter {
+    private String controlMode;
+    private float x, y;
+    private Constants.Side side;
+    private FighterStats stats;
+    private Map<Action, Texture> textures = new HashMap<>();
+    private boolean isDead = false;
+    private boolean skillCutscenePending = false;
+
+    // Trạng thái logic
+    private Action currentState = Action.IDLE;
+    private float stateTimer = 0;
+    private final float ACTION_DURATION = 0.5f;
+    private final float HIT_DURATION = 0.5f;   // ← HIT sẽ hiển thị lâu hơn
+
+    public Fighter(Constants.Side side, String folderPath, String mode) {
+        this.side = side;
+        this.controlMode = mode;
+        this.stats = new FighterStats();
+        this.y = Constants.GROUND_Y;
+
+        // Vị trí đứng sát nhau hơn + cân đối
+        this.x = (side == Constants.Side.LEFT) ?
+            Constants.APP_WIDTH * 0.30f :     // Ronaldo (bên trái)
+            Constants.APP_WIDTH * 0.45f;      // Messi (bên phải)
+        loadTextures(folderPath);
+    }
+
+    // Thêm biến này để nhớ trạng thái trước khi bị hit (dùng để chọn hit_stand hay hit_duck)
+    private Action previousState = IDLE;
+
+    // ==================== LOAD TEXTURES ====================
+    private void loadTextures(String path) {
+        // Load các action bình thường
+        Action[] supportedActions = {
+            IDLE, PUNCH, KICK, BLOCK, DUCK, SKILL
+        };
+
+        for (Action action : supportedActions) {
+            String fileName = path + "/" + action.name().toLowerCase() + ".png";
+            textures.put(action, new Texture(fileName));
+        }
+
+        // Load riêng 2 ảnh hit
+        textures.put(HIT, new Texture(path + "/hit_stand.png"));   // hit khi đứng
+        // Nếu có hit_duck.png thì load thêm (nếu chưa có thì tạm comment)
+        // textures.put("HIT_DUCK", new Texture(path + "/hit_duck.png"));
+    }
+    private String getManualInput() {
+        if (side == Constants.Side.LEFT) {
+            if (com.badlogic.gdx.Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.A)) return "PUNCH";
+            if (com.badlogic.gdx.Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.D)) return "KICK";
+            // ... thêm các phím khác của P1 ...
+        } else {
+            // ... check phím của P2 ...
+        }
+        return "NONE";
+    }
+
+    public void update(float delta) {
+        // Input handling
+        String actionStr = "NONE";
+
+        if ("CAMERA_AI".equals(this.controlMode) || "CAMERA_POSE".equals(this.controlMode)) {
+            int playerId = (side == Constants.Side.LEFT) ? 1 : 2;
+            actionStr = GestureReceiver.getInstance().getActionForPlayer(playerId);
+        } else {
+            actionStr = getManualInput();
+        }
+
+        if (!actionStr.equals("NONE")) {
+            try {
+                Action inputAction = Action.valueOf(actionStr);
+                performAction(inputAction);
+            } catch (IllegalArgumentException e) {}
+        }
+
+        // ==================== STATE TIMER LOGIC ====================
+        if (currentState == HIT) {
+            stateTimer += delta;
+            if (stateTimer >= HIT_DURATION) {
+                resetToIdle();
+            }
+        }
+        else if (isAttacking()) {
+            stateTimer += delta;
+            if (stateTimer >= ACTION_DURATION) {
+                resetToIdle();
+            }
+        }
+
+    }
+    public void performAction(Action action) {
+        // Không cho phép thay đổi trạng thái khi đang HIT
+        if (currentState == HIT) {
+            return;
+        }
+
+        if (action == SKILL) {
+            if (stats.mana < Constants.MANA_COST_SKILL) {
+                return;
+            }
+
+            if (this.currentState == IDLE) {
+                this.currentState = action;
+                this.stateTimer = 0;
+                this.stats.hasHit = false;
+                this.stats.mana = 0;
+                this.skillCutscenePending = true;
+            }
+        } else if (action == PUNCH || action == KICK) {
+            if (this.currentState == IDLE) {
+                this.currentState = action;
+                this.stateTimer = 0;
+                this.stats.hasHit = false;
+            }
+        } else {
+            // Block, Duck
+            if (!isAttacking() && currentState != HIT) {
+                this.currentState = action;
+            }
+        }
+    }
+
+    private void resetToIdle() {
+        this.currentState = IDLE;
+        this.stateTimer = 0;
+        this.stats.hasHit = false;
+    }
+
+    public void draw(SpriteBatch batch) {
+        boolean flipX = (side == Constants.Side.RIGHT);
+        Texture currentTex = textures.get(currentState);
+
+        // Nếu đang HIT thì dùng hit_stand
+        if (currentState == HIT) {
+            currentTex = textures.get(HIT);
+        }
+
+        // Fallback về IDLE nếu không có
+        if (currentTex == null) {
+            currentTex = textures.get(IDLE);
+        }
+
+        if (currentTex == null) return;
+
+        // ====================== SỬA CHÍNH Ở ĐÂY ======================
+        // Giữ chiều cao cố định = CHAR_SIZE (380f hiện tại)
+        // Chiều rộng tính theo tỷ lệ gốc của texture (682x1024 → sẽ ra khoảng 253)
+        float targetHeight = Constants.CHAR_SIZE;
+        float targetWidth  = targetHeight * (currentTex.getWidth() / (float) currentTex.getHeight());
+
+        // Vẽ với kích thước mới (không ép vuông nữa)
+        batch.draw(currentTex,
+            x, y,                          // vị trí
+            targetWidth, targetHeight,     // kích thước thực tế
+            0, 0,
+            currentTex.getWidth(),         // toàn bộ texture
+            currentTex.getHeight(),
+            flipX, false);
+    }
+
+    // GETTERS & SETTERS
+    public boolean isAttacking() {
+        return currentState == Action.PUNCH || currentState == Action.KICK || currentState == Action.SKILL;
+    }
+    public Action getCurrentState() { return currentState; }
+    public FighterStats getStats() { return stats; }
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public int getHp() { return stats.hp; }
+    public float getMana() {return stats.mana; }
+
+    public boolean consumeSkillCutsceneTrigger() {
+        if (!skillCutscenePending) {
+            return false;
+        }
+
+        skillCutscenePending = false;
+        return true;
+    }
+
+    public void takeDamage(float damage, Action attackType) {
+        previousState = currentState;   // lưu trạng thái trước khi bị hit
+
+        boolean isHit = true;
+
+        // === LOGIC NÉ ĐÒN ===
+        if (attackType == PUNCH) {
+            if (currentState == BLOCK) {
+                isHit = false;                    // Block né được đấm
+            }
+        }
+        else if (attackType == KICK) {
+            if (currentState == DUCK) {
+                isHit = false;                    // Duck né được đá
+            }
+        }
+        else if (attackType == SKILL) {
+            isHit = true;                         // Skill không né được
+        }
+
+        if (!isHit) {
+            return;   // né thành công → không mất máu, không đổi trạng thái
+        }
+
+        // === BỊ TRÚNG ĐÒN ===
+        stats.hp -= (int) damage;
+
+        if (stats.hp <= 0) {
+            stats.hp = 0;
+            isDead = true;
+            currentState = HIT;
+            stateTimer = 0;
+            return;
+        }
+
+        // Đổi sang trạng thái HIT
+        currentState = HIT;
+        stateTimer = 0;           // Reset timer để hit hiển thị đủ lâu
+    }
+
+    public boolean isDead() {
+        return isDead || stats.hp <= 0;
+    }
+
+    public void reset() {
+        stats.hp = Constants.MAX_HP;
+        stats.mana = Constants.MAX_MANA;
+        isDead = false;
+        skillCutscenePending = false;
+        resetToIdle();
+    }
+
+    public void dispose() {
+        for (Texture t : textures.values()) if (t != null) t.dispose();
     }
 }
 </file>
