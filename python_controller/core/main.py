@@ -1,14 +1,19 @@
 import cv2
+import logging
 import os
 import socket
 import sys
+import tempfile
 import time
+import traceback
+import ctypes
 
 # Anchor paths so running from IDE, script, or bundled exe still works.
 if getattr(sys, "frozen", False):
     SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.executable))
 else:
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 def resolve_project_root():
     # Installed layout: app root contains assets and AI_Controller.exe.
@@ -22,10 +27,112 @@ def resolve_project_root():
 
     return SCRIPT_DIR
 
+
 PROJECT_ROOT = resolve_project_root()
 ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
+APP_NAME = "BoxingGame"
+
+
+def _get_windows_local_appdata():
+    if os.name != "nt":
+        return None
+
+    # Use Windows API first because LOCALAPPDATA env can be stale/broken on some machines.
+    try:
+        buffer = ctypes.create_unicode_buffer(260)
+        csidl_local_appdata = 28
+        result = ctypes.windll.shell32.SHGetFolderPathW(None, csidl_local_appdata, None, 0, buffer)
+        if result == 0 and buffer.value:
+            return buffer.value
+    except Exception:
+        pass
+
+    return None
+
+
+def _is_dir_usable(path):
+    if not path:
+        return False
+    try:
+        os.makedirs(path, exist_ok=True)
+        test_file = os.path.join(path, ".write_test.tmp")
+        with open(test_file, "w", encoding="utf-8") as fh:
+            fh.write("ok")
+        os.remove(test_file)
+        return True
+    except OSError:
+        return False
+
+
+def resolve_log_file_path():
+    windows_local_appdata = _get_windows_local_appdata()
+    env_local_appdata = os.environ.get("LOCALAPPDATA")
+    home_local_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Local")
+    temp_dir = tempfile.gettempdir()
+
+    base_candidates = [windows_local_appdata, env_local_appdata, home_local_appdata, temp_dir]
+    seen = set()
+
+    for base in base_candidates:
+        if not base:
+            continue
+        norm_base = os.path.normpath(base)
+        if norm_base in seen:
+            continue
+        seen.add(norm_base)
+
+        candidate_dir = os.path.join(norm_base, APP_NAME)
+        if _is_dir_usable(candidate_dir):
+            return os.path.join(candidate_dir, "ai_controller.log")
+
+    # Final fallback keeps process alive even in heavily restricted environments.
+    return os.path.join(tempfile.gettempdir(), "ai_controller.log")
+
+
+LOG_FILE_PATH = resolve_log_file_path()
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
+
+
+def setup_logging():
+    file_handler = None
+    try:
+        file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a", encoding="utf-8")
+    except OSError:
+        # Last fallback keeps process alive even if file logging cannot be created.
+        file_handler = logging.StreamHandler()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[file_handler],
+        force=True,
+    )
+    logger = logging.getLogger("ai_controller")
+    logger.info("=" * 72)
+    logger.info("AI controller process started")
+    logger.info("argv=%s", sys.argv)
+    logger.info("frozen=%s", getattr(sys, "frozen", False))
+    logger.info("executable=%s", sys.executable)
+    logger.info("cwd=%s", os.getcwd())
+    logger.info("script_dir=%s", SCRIPT_DIR)
+    logger.info("project_root=%s", PROJECT_ROOT)
+    logger.info("assets_dir_exists=%s", os.path.exists(ASSETS_DIR))
+    logger.info("log_file=%s", LOG_FILE_PATH)
+    return logger
+
+
+LOGGER = setup_logging()
+
+
+def _log_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    LOGGER.error("Unhandled exception:\n%s", "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)))
+
+
+sys.excepthook = _log_unhandled_exception
 
 from hand_detector import HandDetector
 from gesture_recognizer import GestureRecognizer
@@ -39,6 +146,59 @@ STATE_RESEND_INTERVAL = 0.08  # ~12.5 Hz
 NONE_TO_IDLE_TIMEOUT = 0.30
 GYM_SEND_INTERVAL = 0.12
 DEBUG_SEND = False
+
+
+def _log_cv2_diagnostics():
+    LOGGER.info("OpenCV version: %s", getattr(cv2, "__version__", "unknown"))
+    try:
+        build_info = cv2.getBuildInformation()
+        focus_terms = ["Video I/O", "DirectShow", "Media Foundation", "MSMF", "FFMPEG", "GStreamer"]
+        for line in build_info.splitlines():
+            stripped = line.strip()
+            if any(term in stripped for term in focus_terms):
+                LOGGER.info("cv2-build: %s", stripped)
+    except Exception:
+        LOGGER.exception("Could not read OpenCV build information")
+
+
+def _open_camera_with_fallback(camera_index=0):
+    candidates = [("DEFAULT", None)]
+    if hasattr(cv2, "CAP_DSHOW"):
+        candidates.append(("DSHOW", cv2.CAP_DSHOW))
+    if hasattr(cv2, "CAP_MSMF"):
+        candidates.append(("MSMF", cv2.CAP_MSMF))
+
+    last_cap = None
+    for backend_name, backend_flag in candidates:
+        try:
+            if backend_flag is None:
+                cap = cv2.VideoCapture(camera_index)
+            else:
+                cap = cv2.VideoCapture(camera_index, backend_flag)
+
+            if last_cap is not None and last_cap is not cap:
+                last_cap.release()
+
+            last_cap = cap
+            opened = cap is not None and cap.isOpened()
+            backend_id = None
+            if opened and hasattr(cv2, "CAP_PROP_BACKEND"):
+                backend_id = cap.get(cv2.CAP_PROP_BACKEND)
+
+            LOGGER.info(
+                "Camera open attempt: index=%s backend=%s opened=%s backend_id=%s",
+                camera_index,
+                backend_name,
+                opened,
+                backend_id,
+            )
+
+            if opened:
+                return cap
+        except Exception:
+            LOGGER.exception("Camera open raised exception for backend=%s", backend_name)
+
+    return last_cap
 
 
 def send_action(conn, player_tag, action, cache):
@@ -96,20 +256,31 @@ def main():
     gym_mode = mode == "CAMERA_GYM_POSE"
     server_port = 65433 if gym_mode else 65432
 
+    LOGGER.info("Selected mode=%s, server_port=%s", mode, server_port)
+    _log_cv2_diagnostics()
+
     # 1. --- SETUP SOCKET ---
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Cho phép chạy lại server ngay lập tức nếu bị crash (tránh lỗi Address already in use)
+    # Cho phep chay lai server ngay lap tuc neu bi crash (tranh loi Address already in use)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('127.0.0.1', server_port))
     server_socket.listen(1)
 
     print("Python: [WAITING] Dang doi Java ket noi...")
+    LOGGER.info("Waiting for Java connection on 127.0.0.1:%s", server_port)
     conn, addr = server_socket.accept()
     conn.settimeout(0.03)
     print(f"Python: [CONNECTED] Da ket noi voi Java tai {addr}")
+    LOGGER.info("Connected to Java peer at %s", addr)
 
     # 2. --- KHOI TAO CAMERA & AI ---
-    cap = cv2.VideoCapture(0)
+    cap = _open_camera_with_fallback(0)
+    if cap is None or not cap.isOpened():
+        LOGGER.error("Camera failed to open with all backends. Exiting early.")
+        conn.close()
+        server_socket.close()
+        return
+
     detector = None
     recognizer_p1 = None
     recognizer_p2 = None
@@ -134,17 +305,25 @@ def main():
     }
     last_non_none_time = {"P1": time.monotonic(), "P2": time.monotonic()}
 
+    read_failures = 0
+
     try:
         while True:
             success, frame = cap.read()
             if not success:
+                read_failures += 1
+                LOGGER.warning("Camera read failed (count=%s, mode=%s)", read_failures, mode)
                 if mode == "CAMERA_GYM_POSE":
                     # Gym mode self-heals transient camera glitches instead of exiting.
                     cap.release()
                     time.sleep(0.05)
-                    cap = cv2.VideoCapture(0)
+                    cap = _open_camera_with_fallback(0)
+                    if cap is None or not cap.isOpened():
+                        LOGGER.error("Gym camera reconnect failed after read error")
+                        break
                     continue
                 break
+            read_failures = 0
 
             # Lat anh (Mirror effect) de nguoi choi dieu khien de hon
             frame = cv2.flip(frame, 1)
@@ -218,10 +397,13 @@ def main():
                 break
     except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
         print(f"Loi ket noi socket: {e}")
+        LOGGER.exception("Socket connection error")
     except Exception as e:
         print(f"Loi: {e}")
+        LOGGER.exception("Fatal runtime error")
     finally:
         print("Python: Dang dong ket noi...")
+        LOGGER.info("Shutting down controller")
         conn.close()
         server_socket.close()
         cap.release()
