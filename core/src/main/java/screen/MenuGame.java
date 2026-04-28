@@ -371,6 +371,14 @@ public class MenuGame extends ScreenAdapter {
             return venvPython.toString();
         }
 
+        Path controllerVenvPython = appRoot.resolve("python_controller")
+            .resolve(".venv")
+            .resolve("Scripts")
+            .resolve("python.exe");
+        if (Files.exists(controllerVenvPython)) {
+            return controllerVenvPython.toString();
+        }
+
         return "python";
     }
 
