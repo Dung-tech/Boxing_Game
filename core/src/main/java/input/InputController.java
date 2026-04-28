@@ -12,16 +12,10 @@ public interface InputController {
 
     boolean skill();
 
-    /**
-     * HÀM QUAN TRỌNG NHẤT: Cập nhật dữ liệu mỗi khung hình.
-     */
     String getNextAction();
 
     void update(float delta);
 
-    /**
-     * Hàm reset: Xóa bỏ các trạng thái input sau khi đã xử lý xong.
-     */
     void reset();
 
 }
