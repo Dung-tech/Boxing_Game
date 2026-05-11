@@ -259,6 +259,15 @@ public class MenuGame extends ScreenAdapter {
         game.batch.end();
     }
 
+    private void applyCameraPreviewEnv(ProcessBuilder pb) {
+        pb.environment().put("AI_PREVIEW_STREAM", "1");
+        pb.environment().put("AI_PREVIEW_PORT", "65434");
+        pb.environment().put("AI_PREVIEW_FPS", "12");
+        pb.environment().put("AI_PREVIEW_WIDTH", "320");
+        pb.environment().put("AI_PREVIEW_JPEG_QUALITY", "70");
+        pb.environment().put("AI_PREVIEW_SHOW_WINDOW", "0");
+    }
+
 
     private void drawCenter(com.badlogic.gdx.graphics.g2d.SpriteBatch batch, String text, float width, float y, Color color) {
         layout.setText(font, text);
@@ -272,7 +281,9 @@ public class MenuGame extends ScreenAdapter {
                 Path appRoot = resolveAppRoot();
                 Path packagedExe = appRoot.resolve("AI_Controller.exe");
                 Path pythonControllerDir = appRoot.resolve("python_controller");
-                Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
+                Path packagedExeDirInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller");
+                Path packagedExeInDev = packagedExeDirInDev.resolve("AI_Controller.exe");
+                Path packagedExeLegacyInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
                 Path scriptPath = pythonControllerDir.resolve("core").resolve("main.py");
 
                 // In dev, prioritize script to avoid stale bundled exe mismatches.
@@ -282,6 +293,7 @@ public class MenuGame extends ScreenAdapter {
                     pb.directory(pythonControllerDir.toFile());
                     pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(pb);
 
                     try {
                         pb.start();
@@ -290,6 +302,7 @@ public class MenuGame extends ScreenAdapter {
                         fallbackPb.directory(pythonControllerDir.toFile());
                         fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                         fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        applyCameraPreviewEnv(fallbackPb);
                         fallbackPb.start();
                     }
                     System.out.println("[System] Da tu dong kick-start Python AI!");
@@ -298,6 +311,7 @@ public class MenuGame extends ScreenAdapter {
                     exePb.directory(appRoot.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
                     exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
                 } else if (Files.exists(packagedExeInDev)) {
@@ -305,8 +319,17 @@ public class MenuGame extends ScreenAdapter {
                     exePb.directory(pythonControllerDir.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
                     exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
+                } else if (Files.exists(packagedExeLegacyInDev)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExeLegacyInDev.toString(), aiMode);
+                    exePb.directory(pythonControllerDir.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
+                    exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe (dev legacy): " + packagedExeLegacyInDev);
                 } else {
                     System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
                 }
