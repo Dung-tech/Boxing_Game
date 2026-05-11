@@ -1,23 +1,26 @@
 import cv2
 import mediapipe as mp
 
+from mediapipe_utils import select_pose_model_complexity
+
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
 
 class PoseDetector:
     def __init__(self):
+        model_complexity = select_pose_model_complexity(default=0)
         # Separate models per side to keep tracking stable for each player half.
         self.pose_p1 = mp_pose.Pose(
             static_image_mode=False,
-            model_complexity=0,
+            model_complexity=model_complexity,
             smooth_landmarks=True,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
         )
         self.pose_p2 = mp_pose.Pose(
             static_image_mode=False,
-            model_complexity=0,
+            model_complexity=model_complexity,
             smooth_landmarks=True,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
@@ -58,4 +61,3 @@ class PoseDetector:
             mp_drawing.draw_landmarks(frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
         return {"GYM": result.pose_landmarks}
-

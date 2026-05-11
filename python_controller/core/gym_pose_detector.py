@@ -1,14 +1,17 @@
 import cv2
 import mediapipe as mp
 
+from mediapipe_utils import select_pose_model_complexity
+
 mp_pose = mp.solutions.pose
 
 
 class GymPoseDetector:
     def __init__(self):
+        model_complexity = select_pose_model_complexity(default=0)
         self.pose = mp_pose.Pose(
             static_image_mode=False,
-            model_complexity=0,
+            model_complexity=model_complexity,
             smooth_landmarks=True,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
@@ -46,4 +49,3 @@ class GymPoseDetector:
         for idx in key_ids:
             if idx in coords:
                 cv2.circle(frame, coords[idx], 5, (0, 255, 0), -1)
-
