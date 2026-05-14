@@ -5,12 +5,14 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import controller.GymerController;
 import entity.Gymer;
+import input.CameraPreviewReceiver;
 import input.GymGestureReceiver;
 import main.Main;
 import util.CameraRuntimeManager;
@@ -41,6 +43,12 @@ public class GymScreen extends ScreenAdapter {
     private boolean messiIsEating = true;
     private float messiStateTimer = 0f;
     private static final float MESSI_STATE_INTERVAL = 2f;
+    private Texture previewTexture;
+    private int previewWidth;
+    private int previewHeight;
+    private final CameraPreviewReceiver previewReceiver = CameraPreviewReceiver.getInstance();
+    private static final float PREVIEW_MARGIN = 16f;
+    private static final float PREVIEW_MAX_WIDTH = 320f;
 
     public GymScreen(Main game) {
         this.game = game;
@@ -65,7 +73,13 @@ public class GymScreen extends ScreenAdapter {
         gymerController = new GymerController(gymer);
 
         GymGestureReceiver.getInstance().start();
+        previewReceiver.start();
         startPythonAI();
+    }
+
+    @Override
+    public void hide() {
+        previewReceiver.stop();
     }
 
     @Override
@@ -112,6 +126,8 @@ public class GymScreen extends ScreenAdapter {
             drawCenterText(gameOverSelected == 1 ? "> THOAT RA MENU <" : "THOAT RA MENU", 95, gameOverSelected == 1 ? Color.GOLD : Color.WHITE);
             drawCenterText("Nhan ESC de ve MENU", 60, Color.LIGHT_GRAY);
         }
+        updatePreviewTexture();
+        drawPreview();
         game.batch.end();
 
         drawHpBar();
@@ -182,13 +198,56 @@ public class GymScreen extends ScreenAdapter {
         font.draw(game.batch, text, x, y);
     }
 
+    private void updatePreviewTexture() {
+        byte[] frame = previewReceiver.pollFrame();
+        if (frame == null) return;
+
+        Pixmap pixmap = new Pixmap(frame, 0, frame.length);
+        if (previewTexture == null
+            || previewTexture.getWidth() != pixmap.getWidth()
+            || previewTexture.getHeight() != pixmap.getHeight()) {
+            if (previewTexture != null) {
+                previewTexture.dispose();
+            }
+            previewTexture = new Texture(pixmap);
+        } else {
+            previewTexture.draw(pixmap, 0, 0);
+        }
+        previewWidth = pixmap.getWidth();
+        previewHeight = pixmap.getHeight();
+        pixmap.dispose();
+    }
+
+    private void drawPreview() {
+        if (previewTexture == null || previewWidth <= 0 || previewHeight <= 0) return;
+        float drawWidth = previewWidth;
+        float drawHeight = previewHeight;
+        if (drawWidth > PREVIEW_MAX_WIDTH) {
+            float scale = PREVIEW_MAX_WIDTH / drawWidth;
+            drawWidth *= scale;
+            drawHeight *= scale;
+        }
+        game.batch.draw(previewTexture, PREVIEW_MARGIN, PREVIEW_MARGIN, drawWidth, drawHeight);
+    }
+
+    private void applyCameraPreviewEnv(ProcessBuilder pb) {
+        pb.environment().put("AI_PREVIEW_STREAM", "1");
+        pb.environment().put("AI_PREVIEW_PORT", "65434");
+        pb.environment().put("AI_PREVIEW_FPS", "12");
+        pb.environment().put("AI_PREVIEW_WIDTH", "320");
+        pb.environment().put("AI_PREVIEW_JPEG_QUALITY", "70");
+        pb.environment().put("AI_PREVIEW_SHOW_WINDOW", "0");
+    }
+
     private void startPythonAI() {
         Thread pythonThread = new Thread(() -> {
             try {
                 Path appRoot = resolveAppRoot();
                 Path packagedExe = appRoot.resolve("AI_Controller.exe");
                 Path pythonControllerDir = appRoot.resolve("python_controller");
-                Path packagedExeInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
+                Path packagedExeDirInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller");
+                Path packagedExeInDev = packagedExeDirInDev.resolve("AI_Controller.exe");
+                Path packagedExeLegacyInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
                 Path scriptPath = pythonControllerDir.resolve("core").resolve("main.py");
 
                 // In dev, prioritize script to avoid stale bundled exe mismatches.
@@ -198,6 +257,7 @@ public class GymScreen extends ScreenAdapter {
                     pb.directory(pythonControllerDir.toFile());
                     pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(pb);
 
                     try {
                         pb.start();
@@ -206,6 +266,7 @@ public class GymScreen extends ScreenAdapter {
                         fallbackPb.directory(pythonControllerDir.toFile());
                         fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                         fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                        applyCameraPreviewEnv(fallbackPb);
                         fallbackPb.start();
                     }
                     System.out.println("[System] Da tu dong kick-start Python AI (GYM POSE)!");
@@ -214,6 +275,7 @@ public class GymScreen extends ScreenAdapter {
                     exePb.directory(appRoot.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
                     exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
                 } else if (Files.exists(packagedExeInDev)) {
@@ -221,8 +283,17 @@ public class GymScreen extends ScreenAdapter {
                     exePb.directory(pythonControllerDir.toFile());
                     exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
                     exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
                     exePb.start();
                     System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
+                } else if (Files.exists(packagedExeLegacyInDev)) {
+                    ProcessBuilder exePb = new ProcessBuilder(packagedExeLegacyInDev.toString(), "CAMERA_GYM_POSE");
+                    exePb.directory(pythonControllerDir.toFile());
+                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                    applyCameraPreviewEnv(exePb);
+                    exePb.start();
+                    System.out.println("[System] Da bat AI_Controller.exe (dev legacy): " + packagedExeLegacyInDev);
                 } else {
                     System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
                 }
@@ -278,6 +349,14 @@ public class GymScreen extends ScreenAdapter {
             return venvPython.toString();
         }
 
+        Path controllerVenvPython = appRoot.resolve("python_controller")
+            .resolve(".venv")
+            .resolve("Scripts")
+            .resolve("python.exe");
+        if (Files.exists(controllerVenvPython)) {
+            return controllerVenvPython.toString();
+        }
+
         return "python";
     }
 
@@ -293,5 +372,7 @@ public class GymScreen extends ScreenAdapter {
         if (ronalSiu != null) ronalSiu.dispose();
         if (font != null) font.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
+        previewReceiver.stop();
+        if (previewTexture != null) previewTexture.dispose();
     }
 }

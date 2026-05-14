@@ -3,10 +3,12 @@ package screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import controller.P1Controller;
 import controller.P2Controller;
 import effect.EffectManager;
+import input.CameraPreviewReceiver;
 import input.GestureReceiver;
 import input.KeyboardInput;
 import main.Main;
@@ -27,6 +29,12 @@ public class GameScreen extends ScreenAdapter {
     private P1Controller p1Controller;
     private P2Controller p2Controller;
     private String controlMode;
+    private Texture previewTexture;
+    private int previewWidth;
+    private int previewHeight;
+    private final CameraPreviewReceiver previewReceiver = CameraPreviewReceiver.getInstance();
+    private static final float PREVIEW_MARGIN = 16f;
+    private static final float PREVIEW_MAX_WIDTH = 320f;
 
     private RoundSystem roundSystem;
     private GameStateManager gameStateManager;
@@ -75,6 +83,8 @@ public class GameScreen extends ScreenAdapter {
         p2.draw(game.batch);
         effectManager.draw(game.batch, delta);
         hud.render(game.batch, p1, p2, roundSystem);
+        updatePreviewTexture();
+        drawPreview();
         game.batch.end();
     }
 
@@ -92,6 +102,9 @@ public class GameScreen extends ScreenAdapter {
     @Override
     public void show() {
         GestureReceiver.getInstance().start();
+        if (controlMode != null && controlMode.startsWith("CAMERA")) {
+            previewReceiver.start();
+        }
         game.soundManager.playMusic();
         KeyboardInput p1Input = new KeyboardInput(
             com.badlogic.gdx.Input.Keys.D,
@@ -112,11 +125,50 @@ public class GameScreen extends ScreenAdapter {
     }
 
     @Override
+    public void hide() {
+        previewReceiver.stop();
+    }
+
+    private void updatePreviewTexture() {
+        byte[] frame = previewReceiver.pollFrame();
+        if (frame == null) return;
+
+        Pixmap pixmap = new Pixmap(frame, 0, frame.length);
+        if (previewTexture == null
+            || previewTexture.getWidth() != pixmap.getWidth()
+            || previewTexture.getHeight() != pixmap.getHeight()) {
+            if (previewTexture != null) {
+                previewTexture.dispose();
+            }
+            previewTexture = new Texture(pixmap);
+        } else {
+            previewTexture.draw(pixmap, 0, 0);
+        }
+        previewWidth = pixmap.getWidth();
+        previewHeight = pixmap.getHeight();
+        pixmap.dispose();
+    }
+
+    private void drawPreview() {
+        if (previewTexture == null || previewWidth <= 0 || previewHeight <= 0) return;
+        float drawWidth = previewWidth;
+        float drawHeight = previewHeight;
+        if (drawWidth > PREVIEW_MAX_WIDTH) {
+            float scale = PREVIEW_MAX_WIDTH / drawWidth;
+            drawWidth *= scale;
+            drawHeight *= scale;
+        }
+        game.batch.draw(previewTexture, PREVIEW_MARGIN, PREVIEW_MARGIN, drawWidth, drawHeight);
+    }
+
+    @Override
     public void dispose() {
         background.dispose();
         p1.dispose();
         p2.dispose();
         effectManager.dispose();
         hud.dispose();
+        previewReceiver.stop();
+        if (previewTexture != null) previewTexture.dispose();
     }
 }

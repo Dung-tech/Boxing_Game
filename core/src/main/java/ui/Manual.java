@@ -92,18 +92,20 @@ public class Manual {
 			y = drawBullet(batch, font, "Mapping: 0=IDLE | 1=Đấm | 2=Đá | 3=Đỡ | 4=Né | 5=Tuyệt kỹ", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "Đứng nửa trái khung hình cho P1, nửa phải cho P2.", textX, y, textW, Color.LIGHT_GRAY);
 			y = drawBullet(batch, font, "Trước khi chơi, đợi camera ổn định và nhận diện rõ tay.", textX, y, textW, Color.LIGHT_GRAY);
-			y = drawBullet(batch, font, "Nhấn Q để tắt cửa sổ camera.", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Preview camera hiển thị trong game ở góc trái dưới.", textX, y, textW, Color.WHITE);
 		} else if (selectedTab == 2) {
 			y = drawSectionTitle(batch, font, "CAMERA POSE - NỬA THÂN TRÊN", textX, y, textW);
 			y = drawBullet(batch, font, "Bắt buộc: camera phải thấy rõ nửa thân trên trước khi đấu.", textX, y, textW, Color.LIGHT_GRAY);
 			y = drawBullet(batch, font, "IDLE=guard | BLOCK=2 tay che giữa | DUCK=hạ người", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "PUNCH=đấm xuống rõ | KICK=đấm móc rõ | SKILL=đấm 2 tay", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Preview camera hiển thị trong game ở góc trái dưới.", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "Nếu tracking chậm: lùi nhẹ, đứng đủ sáng, tránh quay nhanh.", textX, y, textW, Color.LIGHT_GRAY);
 		} else {
 			y = drawSectionTitle(batch, font, "GYM", textX, y, textW);
 			y = drawBullet(batch, font, "ENTER: Concentric", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "SPACE: Eccentric", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "ESC: Về menu", textX, y, textW, Color.WHITE);
+			y = drawBullet(batch, font, "Preview camera hiển thị trong game ở góc trái dưới.", textX, y, textW, Color.WHITE);
 			y = drawBullet(batch, font, "Mục tiêu: luân phiên động tác để giữ HP gymer.", textX, y, textW, Color.LIGHT_GRAY);
 			y = drawBullet(batch, font, "Khi game-over: W/S hoặc UP/DOWN để chọn, ENTER để xác nhận.", textX, y, textW, Color.LIGHT_GRAY);
 			y = drawBullet(batch, font, "Có thể nhấn ESC để thoát nhanh về menu.", textX, y, textW, Color.LIGHT_GRAY);
