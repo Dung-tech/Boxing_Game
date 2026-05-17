@@ -12,12 +12,9 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import main.Main;
 import ui.Manual;
+import util.AIControllerLauncher;
 import util.CameraRuntimeManager;
 import util.Constants;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class MenuGame extends ScreenAdapter {
     private final Main game;
@@ -142,11 +139,11 @@ public class MenuGame extends ScreenAdapter {
                 if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                     if (fightSelected == 1) {
                         input.GestureReceiver.getInstance().start();
-                        startPythonAI("CAMERA_AI");
+                        AIControllerLauncher.launch("CAMERA_AI");
                         game.setScreen(new GameScreen(game, "CAMERA_AI"));
                     } else if (fightSelected == 2) {
                         input.GestureReceiver.getInstance().start();
-                        startPythonAI("CAMERA_POSE");
+                        AIControllerLauncher.launch("CAMERA_POSE");
                         game.setScreen(new GameScreen(game, "CAMERA_POSE"));
                     } else {
                         game.setScreen(new GameScreen(game, "KEYBOARD"));
@@ -259,150 +256,12 @@ public class MenuGame extends ScreenAdapter {
         game.batch.end();
     }
 
-    private void applyCameraPreviewEnv(ProcessBuilder pb) {
-        pb.environment().put("AI_PREVIEW_STREAM", "1");
-        pb.environment().put("AI_PREVIEW_PORT", "65434");
-        pb.environment().put("AI_PREVIEW_FPS", "12");
-        pb.environment().put("AI_PREVIEW_WIDTH", "320");
-        pb.environment().put("AI_PREVIEW_JPEG_QUALITY", "70");
-        pb.environment().put("AI_PREVIEW_SHOW_WINDOW", "0");
-    }
-
 
     private void drawCenter(com.badlogic.gdx.graphics.g2d.SpriteBatch batch, String text, float width, float y, Color color) {
         layout.setText(font, text);
         font.setColor(color);
         float x = (width - layout.width) / 2;
         font.draw(batch, text, x, y);
-    }
-    private void startPythonAI(String aiMode) {
-        Thread pythonThread = new Thread(() -> {
-            try {
-                Path appRoot = resolveAppRoot();
-                Path packagedExe = appRoot.resolve("AI_Controller.exe");
-                Path pythonControllerDir = appRoot.resolve("python_controller");
-                Path packagedExeDirInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller");
-                Path packagedExeInDev = packagedExeDirInDev.resolve("AI_Controller.exe");
-                Path packagedExeLegacyInDev = pythonControllerDir.resolve("dist").resolve("AI_Controller.exe");
-                Path scriptPath = pythonControllerDir.resolve("core").resolve("main.py");
-
-                // In dev, prioritize script to avoid stale bundled exe mismatches.
-                if (Files.exists(scriptPath)) {
-                    String pythonExe = resolvePythonExecutable(appRoot);
-                    ProcessBuilder pb = new ProcessBuilder(pythonExe, scriptPath.toString(), aiMode);
-                    pb.directory(pythonControllerDir.toFile());
-                    pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                    pb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    applyCameraPreviewEnv(pb);
-
-                    try {
-                        pb.start();
-                    } catch (Exception firstError) {
-                        ProcessBuilder fallbackPb = new ProcessBuilder("py", "-3", scriptPath.toString(), aiMode);
-                        fallbackPb.directory(pythonControllerDir.toFile());
-                        fallbackPb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                        fallbackPb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                        applyCameraPreviewEnv(fallbackPb);
-                        fallbackPb.start();
-                    }
-                    System.out.println("[System] Da tu dong kick-start Python AI!");
-                } else if (Files.exists(packagedExe)) {
-                    ProcessBuilder exePb = new ProcessBuilder(packagedExe.toString(), aiMode);
-                    exePb.directory(appRoot.toFile());
-                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    applyCameraPreviewEnv(exePb);
-                    exePb.start();
-                    System.out.println("[System] Da bat AI_Controller.exe: " + packagedExe);
-                } else if (Files.exists(packagedExeInDev)) {
-                    ProcessBuilder exePb = new ProcessBuilder(packagedExeInDev.toString(), aiMode);
-                    exePb.directory(pythonControllerDir.toFile());
-                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    applyCameraPreviewEnv(exePb);
-                    exePb.start();
-                    System.out.println("[System] Da bat AI_Controller.exe (dev): " + packagedExeInDev);
-                } else if (Files.exists(packagedExeLegacyInDev)) {
-                    ProcessBuilder exePb = new ProcessBuilder(packagedExeLegacyInDev.toString(), aiMode);
-                    exePb.directory(pythonControllerDir.toFile());
-                    exePb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-                    exePb.redirectError(ProcessBuilder.Redirect.DISCARD);
-                    applyCameraPreviewEnv(exePb);
-                    exePb.start();
-                    System.out.println("[System] Da bat AI_Controller.exe (dev legacy): " + packagedExeLegacyInDev);
-                } else {
-                    System.err.println("[Loi System] Khong tim thay AI_Controller.exe hoac Python script.");
-                }
-
-                // (Tùy chọn) Đọc log từ Python nếu ông giáo muốn debug ngay trong Console của Java
-            /*
-            java.util.Scanner s = new java.util.Scanner(process.getInputStream());
-            while (s.hasNextLine()) System.out.println("Python: " + s.nextLine());
-            */
-
-            } catch (Exception e) {
-                System.err.println("[Lỗi System] Khong the tu dong bat Python: " + e.getMessage());
-            }
-        });
-        pythonThread.setDaemon(true);
-        pythonThread.start();
-    }
-
-    private Path resolveAppRoot() {
-        Path runtimeBase = resolveRuntimeBaseDir();
-        if (runtimeBase != null && isAppRoot(runtimeBase)) {
-            return runtimeBase;
-        }
-
-        Path dir = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
-
-        // user.dir may point to module folders (e.g. /core or /lwjgl3) when run from IDE/Gradle.
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (isAppRoot(dir)) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-
-        return Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
-    }
-
-    private Path resolveRuntimeBaseDir() {
-        try {
-            Path codePath = Paths.get(MenuGame.class.getProtectionDomain().getCodeSource().getLocation().toURI())
-                .toAbsolutePath().normalize();
-            return Files.isRegularFile(codePath) ? codePath.getParent() : codePath;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private boolean isAppRoot(Path dir) {
-        if (dir == null) return false;
-        return Files.exists(dir.resolve("AI_Controller.exe"))
-            || Files.exists(dir.resolve("python_controller").resolve("core").resolve("main.py"));
-    }
-
-    private String resolvePythonExecutable(Path appRoot) {
-        String pythonFromEnv = System.getenv("PYTHON_EXE");
-        if (pythonFromEnv != null && !pythonFromEnv.trim().isEmpty()) {
-            return pythonFromEnv.trim();
-        }
-
-        Path venvPython = appRoot.resolve(".venv").resolve("Scripts").resolve("python.exe");
-        if (Files.exists(venvPython)) {
-            return venvPython.toString();
-        }
-
-        Path controllerVenvPython = appRoot.resolve("python_controller")
-            .resolve(".venv")
-            .resolve("Scripts")
-            .resolve("python.exe");
-        if (Files.exists(controllerVenvPython)) {
-            return controllerVenvPython.toString();
-        }
-
-        return "python";
     }
 
 
