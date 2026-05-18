@@ -47,6 +47,14 @@ public class GameScreen extends ScreenAdapter {
 
     private RoundSystem roundSystem;
     private GameStateManager gameStateManager;
+    private Texture[] countdownTextures;
+    private float countdownTimer = 0f;
+    private boolean countdownActive = false;
+    private boolean countdownPlayed = false;
+    private int countdownIndex = 0;
+    private float countdownStepTimer = 0f;
+    private static final float COUNTDOWN_STEP_SECONDS = 1.0f;
+    private static final float COUNTDOWN_FIRST_HOLD_SECONDS = 1.0f;
 
     public GameScreen(Main game, String mode) {
         this.game = game;
@@ -68,6 +76,7 @@ public class GameScreen extends ScreenAdapter {
         scoreboardLayout = new GlyphLayout();
         scoreboardTextures = new HashMap<>();
         loadScoreboardTextures();
+        loadCountdownTextures();
     }
 
     @Override
@@ -82,8 +91,11 @@ public class GameScreen extends ScreenAdapter {
             return;
         }
 
+        updateCountdown(delta);
+
         boolean waitForRoundTransition = roundSystem.isRoundEnded() && !roundSystem.isTransitionReady();
-        if (!waitForRoundTransition) {
+        boolean gameplayBlocked = countdownActive;
+        if (!gameplayBlocked && !waitForRoundTransition) {
             if (p1Controller != null) p1Controller.update(delta);
             if (p2Controller != null) p2Controller.update(delta);
 
@@ -95,17 +107,19 @@ public class GameScreen extends ScreenAdapter {
             p2.update(delta);
             combatSystem.update(p1, p2);
         }
-        roundSystem.update(delta, p1, p2);
+        if (!gameplayBlocked) {
+            roundSystem.update(delta, p1, p2);
 
-        if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
-            if (roundSystem.isTransitionReady()) {
-                p1.reset();
-                p2.reset();
-                roundSystem.nextRound();
+            if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
+                if (roundSystem.isTransitionReady()) {
+                    p1.reset();
+                    p2.reset();
+                    roundSystem.nextRound();
+                }
             }
-        }
 
-        gameStateManager.update(p1, p2, roundSystem);
+            gameStateManager.update(p1, p2, roundSystem);
+        }
 
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.batch.begin();
@@ -116,6 +130,7 @@ public class GameScreen extends ScreenAdapter {
         hud.render(game.batch, p1, p2, roundSystem);
         previewOverlay.update();
         previewOverlay.draw(game.batch);
+        renderCountdown();
         game.batch.end();
 
         if (roundSystem.isRoundEnded() && !roundSystem.isTransitionReady()) {
@@ -132,6 +147,83 @@ public class GameScreen extends ScreenAdapter {
         addScoreboardTexture("1-2", "scoreboard/1-2.png");
         addScoreboardTexture("2-0", "scoreboard/2-0.png");
         addScoreboardTexture("2-1", "scoreboard/2-1.png");
+    }
+
+    private void loadCountdownTextures() {
+        countdownTextures = new Texture[4];
+        countdownTextures[0] = loadCountdownTexture("images/countDown/3.png", null);
+        countdownTextures[1] = loadCountdownTexture("images/countDown/2.png", null);
+        countdownTextures[2] = loadCountdownTexture("images/countDown/1.png", null);
+        countdownTextures[3] = loadCountdownTexture("images/countDown/fight.png", "images/countDown/figth.png");
+    }
+
+    private Texture loadCountdownTexture(String primary, String fallback) {
+        FileHandle file = Gdx.files.internal(primary);
+        if (!file.exists() && fallback != null) {
+            file = Gdx.files.internal(fallback);
+        }
+        return file.exists() ? new Texture(file) : null;
+    }
+
+    private void updateCountdown(float delta) {
+        if (!countdownActive) return;
+        countdownTimer += delta;
+        countdownStepTimer += delta;
+
+        while (countdownStepTimer >= COUNTDOWN_STEP_SECONDS) {
+            countdownStepTimer -= COUNTDOWN_STEP_SECONDS;
+            int nextIndex = countdownIndex + 1;
+            if (nextIndex < countdownTextures.length) {
+                countdownIndex = nextIndex;
+                playCountdownTickIfNumber(countdownIndex);
+            } else {
+                countdownIndex = countdownTextures.length - 1;
+                countdownActive = false;
+                break;
+            }
+        }
+    }
+
+    private void startCountdown() {
+        if (countdownPlayed) return;
+        countdownPlayed = true;
+        countdownTimer = 0f;
+        countdownStepTimer = -COUNTDOWN_FIRST_HOLD_SECONDS;
+        countdownIndex = 0;
+        countdownActive = countdownTextures != null && countdownTextures.length > 0;
+        if (countdownActive) {
+            playCountdownTickIfNumber(countdownIndex);
+        }
+    }
+
+    private void playCountdownTickIfNumber(int index) {
+        if (game.soundManager == null) return;
+        if (index >= 0 && index <= 2) {
+            game.soundManager.playCountDown();
+        }
+    }
+
+    private Texture getCountdownTexture() {
+        if (!countdownActive || countdownTextures == null || countdownTextures.length == 0) return null;
+        if (countdownIndex < 0) countdownIndex = 0;
+        if (countdownIndex >= countdownTextures.length) countdownIndex = countdownTextures.length - 1;
+        return countdownTextures[countdownIndex];
+    }
+
+    private void renderCountdown() {
+        Texture texture = getCountdownTexture();
+        if (texture == null) return;
+        float maxHeight = Constants.APP_HEIGHT * 0.45f;
+        float maxWidth = Constants.APP_WIDTH * 0.6f;
+        float scale = Math.min(
+            maxWidth / (float) texture.getWidth(),
+            maxHeight / (float) texture.getHeight()
+        );
+        float drawW = texture.getWidth() * scale;
+        float drawH = texture.getHeight() * scale;
+        float x = (Constants.APP_WIDTH - drawW) / 2f;
+        float y = (Constants.APP_HEIGHT - drawH) / 2f;
+        game.batch.draw(texture, x, y, drawW, drawH);
     }
 
     private void addScoreboardTexture(String key, String path) {
@@ -240,6 +332,7 @@ public class GameScreen extends ScreenAdapter {
             com.badlogic.gdx.Input.Keys.ENTER
         );
         p2Controller = new P2Controller(p2, p2Input);
+        startCountdown();
     }
 
     @Override
@@ -259,6 +352,11 @@ public class GameScreen extends ScreenAdapter {
         if (scoreboardSmallFont != null) scoreboardSmallFont.dispose();
         if (scoreboardTextures != null) {
             for (Texture tex : scoreboardTextures.values()) {
+                if (tex != null) tex.dispose();
+            }
+        }
+        if (countdownTextures != null) {
+            for (Texture tex : countdownTextures) {
                 if (tex != null) tex.dispose();
             }
         }
