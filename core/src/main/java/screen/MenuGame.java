@@ -35,6 +35,8 @@ public class MenuGame extends ScreenAdapter {
     private boolean isManualVisible = false;
     private boolean isSettingsVisible = false;
     private final Manual manualUI;
+    private int settingsSelected = 0;
+    private static final float VOLUME_STEP = 0.05f;
 
     public MenuGame(Main game) {
         this.game = game;
@@ -128,6 +130,31 @@ public class MenuGame extends ScreenAdapter {
                 return;
             }
 
+            if (isSettingsVisible) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+                    settingsSelected = (settingsSelected - 1 + 2) % 2;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+                    settingsSelected = (settingsSelected + 1) % 2;
+                }
+
+                float delta = 0f;
+                if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT) || Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+                    delta = -VOLUME_STEP;
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT) || Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+                    delta = VOLUME_STEP;
+                }
+                if (delta != 0f && game.soundManager != null) {
+                    if (settingsSelected == 0) {
+                        game.soundManager.setMusicVolume(game.soundManager.getMusicVolume() + delta);
+                    } else {
+                        game.soundManager.setSfxVolume(game.soundManager.getSfxVolume() + delta);
+                    }
+                }
+                return;
+            }
+
             // Điều khiển trong bảng chọn Mode
             if (isFightOptionsVisible) {
                 if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
@@ -176,6 +203,7 @@ public class MenuGame extends ScreenAdapter {
                     break;
                 case 3: // SETTINGS
                     isSettingsVisible = true;
+                    settingsSelected = 0;
                     break;
                 case 4: // QUIT GAME
                     Gdx.app.exit();
@@ -244,15 +272,36 @@ public class MenuGame extends ScreenAdapter {
     }
 
     private void drawSettingsOverlay() {
+        float panelX = 200;
+        float panelY = 150;
+        float panelW = Constants.APP_WIDTH - 400;
+        float panelH = Constants.APP_HEIGHT - 300;
+
+        float musicY = 440;
+        float sfxY = 380;
+        float highlightY = (settingsSelected == 0) ? musicY - 30 : sfxY - 30;
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(20/255f, 20/255f, 30/255f, 0.95f);
-        shapeRenderer.rect(200, 150, Constants.APP_WIDTH - 400, Constants.APP_HEIGHT - 300);
+        shapeRenderer.rect(panelX, panelY, panelW, panelH);
+
+        shapeRenderer.setColor(new Color(180/255f, 30/255f, 30/255f, 1f));
+        shapeRenderer.rect(panelX + 60, highlightY, panelW - 120, 40);
         shapeRenderer.end();
 
+        int musicPct = 100;
+        int sfxPct = 100;
+        if (game.soundManager != null) {
+            musicPct = Math.round(game.soundManager.getMusicVolume() * 100f);
+            sfxPct = Math.round(game.soundManager.getSfxVolume() * 100f);
+        }
+
         game.batch.begin();
-        drawCenter(game.batch, "--- SETTINGS ---", Constants.APP_WIDTH, 500, Color.ORANGE);
-        drawCenter(game.batch, "Audio Volume: 100% (Coming Soon)", Constants.APP_WIDTH, 400, Color.WHITE);
-        drawCenter(game.batch, "Press ESC to go back", Constants.APP_WIDTH, 250, Color.GRAY);
+        drawCenter(game.batch, "--- SETTINGS ---", Constants.APP_WIDTH, 520, Color.ORANGE);
+        drawCenter(game.batch, "Music Volume: " + musicPct + "%", Constants.APP_WIDTH, musicY, Color.WHITE);
+        drawCenter(game.batch, "SFX Volume: " + sfxPct + "%", Constants.APP_WIDTH, sfxY, Color.WHITE);
+        drawCenter(game.batch, "Use LEFT/RIGHT to adjust | UP/DOWN to select | ESC to back",
+            Constants.APP_WIDTH, 260, Color.GRAY);
         game.batch.end();
     }
 

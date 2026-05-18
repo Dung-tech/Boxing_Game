@@ -1,6 +1,7 @@
 package screen;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -51,23 +52,37 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame(game));
+            return;
+        }
+
         // KIỂM TRA CUTSCENE PHẢI Ở ĐẦU TIÊN - trước mọi update
         if (showSkillCutsceneIfNeeded()) {
             return;
         }
 
-        if (p1Controller != null) p1Controller.update(delta);
-        if (p2Controller != null) p2Controller.update(delta);
+        boolean waitForRoundTransition = roundSystem.isRoundEnded() && !roundSystem.isTransitionReady();
+        if (!waitForRoundTransition) {
+            if (p1Controller != null) p1Controller.update(delta);
+            if (p2Controller != null) p2Controller.update(delta);
 
-        p1.update(delta);
-        p2.update(delta);
-        combatSystem.update(p1, p2);
+            if (showSkillCutsceneIfNeeded()) {
+                return;
+            }
+
+            p1.update(delta);
+            p2.update(delta);
+            combatSystem.update(p1, p2);
+        }
         roundSystem.update(delta, p1, p2);
 
         if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
-            p1.reset();
-            p2.reset();
-            roundSystem.nextRound();
+            if (roundSystem.isTransitionReady()) {
+                p1.reset();
+                p2.reset();
+                roundSystem.nextRound();
+            }
         }
 
         gameStateManager.update(p1, p2, roundSystem);

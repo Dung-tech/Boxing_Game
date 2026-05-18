@@ -5,6 +5,10 @@ import com.badlogic.gdx.audio.Sound;
 import util.AssetManagerWrapper;
 
 public class SoundManager {
+    private static final float MENU_MUSIC_BASE_VOLUME = 0.5f;
+    private static final float FIGHT_MUSIC_BASE_VOLUME = 1.0f;
+    private static final float END_MUSIC_BASE_VOLUME = 0.7f;
+
     public enum MusicState {
         NONE,
         MENU,
@@ -16,6 +20,8 @@ public class SoundManager {
     private Music bgMusic, menuMusic, endMusic;
     private AssetManagerWrapper wrapper;
     private MusicState currentMusicState = MusicState.NONE;
+    private float musicVolume = 1.0f;
+    private float sfxVolume = 1.0f;
 
     // GIỮ TÊN HÀM load() để file Main.java không bị lỗi
     public void load() {
@@ -60,10 +66,10 @@ public class SoundManager {
         playMusic();
     }
 
-    public void playPunch() { if (punch != null) punch.play(); }
-    public void playKick() { if (kick != null) kick.play(); }
-    public void playHit() { if (hit != null) hit.play(); }
-    public void playGlassBreak() { if (glassBreak != null) glassBreak.play(); }
+    public void playPunch() { if (punch != null) punch.play(sfxVolume); }
+    public void playKick() { if (kick != null) kick.play(sfxVolume); }
+    public void playHit() { if (hit != null) hit.play(sfxVolume); }
+    public void playGlassBreak() { if (glassBreak != null) glassBreak.play(sfxVolume); }
 
     public void stopBackgroundMusic() {
         if (bgMusic != null) {
@@ -87,13 +93,13 @@ public class SoundManager {
 
         switch (nextState) {
             case MENU:
-                startMusic(menuMusic, true, 0.5f);
+                startMusic(menuMusic, true, MENU_MUSIC_BASE_VOLUME);
                 break;
             case FIGHT:
-                startMusic(bgMusic, true, 1.0f);
+                startMusic(bgMusic, true, FIGHT_MUSIC_BASE_VOLUME);
                 break;
             case END:
-                startMusic(endMusic, true, 0.7f);
+                startMusic(endMusic, true, END_MUSIC_BASE_VOLUME);
                 break;
             case NONE:
             default:
@@ -103,11 +109,54 @@ public class SoundManager {
         currentMusicState = nextState;
     }
 
-    private void startMusic(Music music, boolean loop, float volume) {
+    private void startMusic(Music music, boolean loop, float baseVolume) {
         if (music == null) return;
         music.setLooping(loop);
-        music.setVolume(volume);
+        applyMusicVolume(music, baseVolume);
         music.play();
+    }
+
+    private void applyMusicVolume(Music music, float baseVolume) {
+        if (music == null) return;
+        music.setVolume(baseVolume * musicVolume);
+    }
+
+    private void updateCurrentMusicVolume() {
+        switch (currentMusicState) {
+            case MENU:
+                applyMusicVolume(menuMusic, MENU_MUSIC_BASE_VOLUME);
+                break;
+            case FIGHT:
+                applyMusicVolume(bgMusic, FIGHT_MUSIC_BASE_VOLUME);
+                break;
+            case END:
+                applyMusicVolume(endMusic, END_MUSIC_BASE_VOLUME);
+                break;
+            case NONE:
+            default:
+                break;
+        }
+    }
+
+    public float getMusicVolume() {
+        return musicVolume;
+    }
+
+    public void setMusicVolume(float volume) {
+        musicVolume = clampVolume(volume);
+        updateCurrentMusicVolume();
+    }
+
+    public float getSfxVolume() {
+        return sfxVolume;
+    }
+
+    public void setSfxVolume(float volume) {
+        sfxVolume = clampVolume(volume);
+    }
+
+    private float clampVolume(float volume) {
+        return Math.max(0f, Math.min(1f, volume));
     }
 
     private void stopAllMusicInternal() {

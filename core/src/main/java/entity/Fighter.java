@@ -18,6 +18,7 @@ public class Fighter {
     private Map<Action, Texture> textures = new HashMap<>();
     private boolean isDead = false;
     private boolean skillCutscenePending = false;
+    private Action lastDamageType = null;
 
     // Trạng thái logic
     private Action currentState = Action.IDLE;
@@ -181,7 +182,8 @@ public class Fighter {
     public float getX() { return x; }
     public float getY() { return y; }
     public int getHp() { return stats.hp; }
-    public float getMana() {return stats.mana; }
+    public float getMana() { return stats.mana; }
+    public boolean wasLastHitBySkill() { return lastDamageType == Action.SKILL; }
 
     public boolean consumeSkillCutsceneTrigger() {
         if (skillCutscenePending) {
@@ -216,6 +218,7 @@ public class Fighter {
         }
 
         // === BỊ TRÚNG ĐÒN ===
+        lastDamageType = attackType;
         stats.hp -= (int) damage;
 
         if (stats.hp <= 0) {
@@ -240,6 +243,7 @@ public class Fighter {
         stats.mana = Constants.MAX_MANA;
         isDead = false;
         skillCutscenePending = false;
+        lastDamageType = null;
         resetToIdle();
     }
 
