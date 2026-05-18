@@ -1,0 +1,40 @@
+2026-04-17 20:45:07,428 [INFO] ========================================================================
+2026-04-17 20:45:07,428 [INFO] AI controller process started
+2026-04-17 20:45:07,428 [INFO] argv=['D:\\Boxing_Game\\python_controller\\core\\main.py', 'CAMERA_GYM_POSE']
+2026-04-17 20:45:07,428 [INFO] frozen=False
+2026-04-17 20:45:07,428 [INFO] executable=D:\Boxing_Game\.venv\Scripts\python.exe
+2026-04-17 20:45:07,428 [INFO] cwd=D:\Boxing_Game\python_controller
+2026-04-17 20:45:07,428 [INFO] script_dir=D:\Boxing_Game\python_controller\core
+2026-04-17 20:45:07,428 [INFO] project_root=D:\Boxing_Game\python_controller\core
+2026-04-17 20:45:07,428 [INFO] assets_dir_exists=False
+2026-04-17 20:45:08,127 [INFO] Selected mode=CAMERA_GYM_POSE, server_port=65433
+2026-04-17 20:45:08,127 [INFO] OpenCV version: 4.13.0
+2026-04-17 20:45:08,128 [INFO] cv2-build: Video I/O:
+2026-04-17 20:45:08,128 [INFO] cv2-build: FFMPEG:                      YES (prebuilt binaries)
+2026-04-17 20:45:08,128 [INFO] cv2-build: GStreamer:                   NO
+2026-04-17 20:45:08,129 [INFO] cv2-build: DirectShow:                  YES
+2026-04-17 20:45:08,129 [INFO] cv2-build: Media Foundation:            YES
+2026-04-17 20:45:08,129 [INFO] Waiting for Java connection on 127.0.0.1:65433
+2026-04-17 20:45:09,240 [INFO] Connected to Java peer at ('127.0.0.1', 2668)
+2026-04-17 20:45:09,872 [INFO] Camera open attempt: index=0 backend=DEFAULT opened=True backend_id=1400.0
+2026-04-17 20:45:31,623 [INFO] Shutting down controller
+2026-04-17 20:45:33,446 [INFO] ========================================================================
+2026-04-17 20:45:33,446 [INFO] AI controller process started
+2026-04-17 20:45:33,446 [INFO] argv=['D:\\Boxing_Game\\python_controller\\core\\main.py', 'CAMERA_AI']
+2026-04-17 20:45:33,446 [INFO] frozen=False
+2026-04-17 20:45:33,446 [INFO] executable=D:\Boxing_Game\.venv\Scripts\python.exe
+2026-04-17 20:45:33,446 [INFO] cwd=D:\Boxing_Game\python_controller
+2026-04-17 20:45:33,446 [INFO] script_dir=D:\Boxing_Game\python_controller\core
+2026-04-17 20:45:33,446 [INFO] project_root=D:\Boxing_Game\python_controller\core
+2026-04-17 20:45:33,446 [INFO] assets_dir_exists=False
+2026-04-17 20:45:34,108 [INFO] Selected mode=CAMERA_AI, server_port=65432
+2026-04-17 20:45:34,109 [INFO] OpenCV version: 4.13.0
+2026-04-17 20:45:34,109 [INFO] cv2-build: Video I/O:
+2026-04-17 20:45:34,109 [INFO] cv2-build: FFMPEG:                      YES (prebuilt binaries)
+2026-04-17 20:45:34,109 [INFO] cv2-build: GStreamer:                   NO
+2026-04-17 20:45:34,109 [INFO] cv2-build: DirectShow:                  YES
+2026-04-17 20:45:34,109 [INFO] cv2-build: Media Foundation:            YES
+2026-04-17 20:45:34,112 [INFO] Waiting for Java connection on 127.0.0.1:65432
+2026-04-17 20:45:35,282 [INFO] Connected to Java peer at ('127.0.0.1', 8917)
+2026-04-17 20:45:35,766 [INFO] Camera open attempt: index=0 backend=DEFAULT opened=True backend_id=1400.0
+2026-04-17 20:45:44,876 [INFO] Shutting down controller
