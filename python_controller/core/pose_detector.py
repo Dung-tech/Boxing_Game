@@ -51,13 +51,3 @@ class PoseDetector:
             "P1": p1_result.pose_landmarks,
             "P2": p2_result.pose_landmarks,
         }
-
-    def detect_single(self, frame):
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
-
-        result = self.pose_single.process(rgb)
-        if result.pose_landmarks:
-            mp_drawing.draw_landmarks(frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-        return {"GYM": result.pose_landmarks}
