@@ -13,6 +13,7 @@ public class AssetManagerWrapper {
         manager.load("sounds/hit.mp3", Sound.class);
         manager.load("sounds/kick.mp3", Sound.class);
         manager.load("sounds/glass_break.mp3", Sound.class);
+        manager.load("sounds/countDownGym.mp3", Sound.class);
         manager.load("sounds/CountDownSound.mp3", Sound.class);
 
         // GIỮ NGUYÊN TÊN FILE NHẠC NỀN CỦA BẠN
