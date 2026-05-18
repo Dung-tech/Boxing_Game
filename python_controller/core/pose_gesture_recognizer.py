@@ -8,7 +8,6 @@ POSTURE_HISTORY_SIZE = 4
 POSTURE_STABILITY_MIN = 2  # 2/4 for posture stabilization
 
 VISIBILITY_MIN = 0.30
-LOSS_HOLD_SECONDS = 0.22
 BURST_COOLDOWN = 0.22
 BURST_DEADBAND_SECONDS = 0.08
 
@@ -44,8 +43,6 @@ class PoseGestureRecognizer:
         self.last_burst_time = 0.0
         self.burst_cooldown = BURST_COOLDOWN
         self.last_stable_posture = "IDLE"
-        self.last_seen_time = time.monotonic()
-        self.loss_hold_seconds = LOSS_HOLD_SECONDS
         self.deadband_until = 0.0
 
         self.base_hip_y = None
@@ -103,8 +100,6 @@ class PoseGestureRecognizer:
             # Low visibility is treated as a successful hide/duck.
             self.last_stable_posture = "DUCK"
             return "DUCK"
-
-        self.last_seen_time = now
 
         shoulder_width = max(1e-4, self._dist(ls, rs))
         mid_shoulder_y = (ls[1] + rs[1]) * 0.5
@@ -246,4 +241,3 @@ class PoseGestureRecognizer:
 
         # Any non-matching posture falls back to default IDLE state.
         return "IDLE"
-
