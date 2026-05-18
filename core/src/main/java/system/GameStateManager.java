@@ -19,7 +19,7 @@ public class GameStateManager {
     public void update(Fighter p1, Fighter p2, RoundSystem roundSystem) {
         if (currentState != Constants.GameState.PLAYING) return;
 
-        if (roundSystem.isRoundEnded() && roundSystem.isMatchEnded()) {
+        if (roundSystem.isRoundEnded() && roundSystem.isMatchEnded() && roundSystem.isTransitionReady()) {
             currentState = Constants.GameState.GAME_OVER;
             game.setScreen(new GameOverScreen(
                 game,

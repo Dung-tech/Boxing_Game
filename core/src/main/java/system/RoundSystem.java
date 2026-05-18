@@ -9,9 +9,20 @@ public class RoundSystem {
     private boolean roundEnded = false;
     private int p1RoundWins = 0;
     private int p2RoundWins = 0;
+    private boolean transitionReady = true;
+    private float endDelayTimer = 0f;
+    private float endDelayDuration = 0f;
 
     public void update(float delta, Fighter p1, Fighter p2) {
-        if (roundEnded) return;
+        if (roundEnded) {
+            if (!transitionReady) {
+                endDelayTimer += delta;
+                if (endDelayTimer >= endDelayDuration) {
+                    transitionReady = true;
+                }
+            }
+            return;
+        }
 
         timeLeft -= delta;
 
@@ -22,6 +33,9 @@ public class RoundSystem {
 
     private void endCurrentRound(Fighter p1, Fighter p2) {
         roundEnded = true;
+        boolean skillKO = (p1.isDead() && p1.wasLastHitBySkill()) ||
+            (p2.isDead() && p2.wasLastHitBySkill());
+        startEndDelay(skillKO);
 
         if (p1.isDead() && !p2.isDead()) {
             p2RoundWins++;
@@ -35,8 +49,18 @@ public class RoundSystem {
         // Hòa thì không ai được điểm
     }
 
+    private void startEndDelay(boolean delay) {
+        endDelayDuration = delay ? Constants.SKILL_ROUND_END_DELAY_SECONDS : 0f;
+        endDelayTimer = 0f;
+        transitionReady = endDelayDuration <= 0f;
+    }
+
     public boolean isRoundEnded() {
         return roundEnded;
+    }
+
+    public boolean isTransitionReady() {
+        return transitionReady;
     }
 
     public boolean isMatchEnded() {
@@ -51,6 +75,9 @@ public class RoundSystem {
         currentRound++;
         timeLeft = Constants.ROUND_TIME;
         roundEnded = false;
+        transitionReady = true;
+        endDelayTimer = 0f;
+        endDelayDuration = 0f;
     }
 
     // Getters
@@ -64,4 +91,7 @@ public class RoundSystem {
         roundEnded = false;
         p1RoundWins = 0;
         p2RoundWins = 0;
+        transitionReady = true;
+        endDelayTimer = 0f;
+        endDelayDuration = 0f;
     }}

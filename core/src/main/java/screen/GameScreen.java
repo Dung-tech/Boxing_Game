@@ -1,9 +1,9 @@
 package screen;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import controller.P1Controller;
 import controller.P2Controller;
@@ -14,6 +14,7 @@ import input.KeyboardInput;
 import main.Main;
 import entity.Fighter;
 import system.CombatSystem;
+import ui.CameraPreviewOverlay;
 import ui.GameHUD;
 import util.Constants;
 import system.GameStateManager;
@@ -29,12 +30,8 @@ public class GameScreen extends ScreenAdapter {
     private P1Controller p1Controller;
     private P2Controller p2Controller;
     private String controlMode;
-    private Texture previewTexture;
-    private int previewWidth;
-    private int previewHeight;
-    private final CameraPreviewReceiver previewReceiver = CameraPreviewReceiver.getInstance();
-    private static final float PREVIEW_MARGIN = 16f;
-    private static final float PREVIEW_MAX_WIDTH = 320f;
+    private final CameraPreviewOverlay previewOverlay =
+        new CameraPreviewOverlay(CameraPreviewReceiver.getInstance());
 
     private RoundSystem roundSystem;
     private GameStateManager gameStateManager;
@@ -55,23 +52,37 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuGame(game));
+            return;
+        }
+
         // KIỂM TRA CUTSCENE PHẢI Ở ĐẦU TIÊN - trước mọi update
         if (showSkillCutsceneIfNeeded()) {
             return;
         }
 
-        if (p1Controller != null) p1Controller.update(delta);
-        if (p2Controller != null) p2Controller.update(delta);
+        boolean waitForRoundTransition = roundSystem.isRoundEnded() && !roundSystem.isTransitionReady();
+        if (!waitForRoundTransition) {
+            if (p1Controller != null) p1Controller.update(delta);
+            if (p2Controller != null) p2Controller.update(delta);
 
-        p1.update(delta);
-        p2.update(delta);
-        combatSystem.update(p1, p2);
+            if (showSkillCutsceneIfNeeded()) {
+                return;
+            }
+
+            p1.update(delta);
+            p2.update(delta);
+            combatSystem.update(p1, p2);
+        }
         roundSystem.update(delta, p1, p2);
 
         if (roundSystem.isRoundEnded() && !roundSystem.isMatchEnded()) {
-            p1.reset();
-            p2.reset();
-            roundSystem.nextRound();
+            if (roundSystem.isTransitionReady()) {
+                p1.reset();
+                p2.reset();
+                roundSystem.nextRound();
+            }
         }
 
         gameStateManager.update(p1, p2, roundSystem);
@@ -83,8 +94,8 @@ public class GameScreen extends ScreenAdapter {
         p2.draw(game.batch);
         effectManager.draw(game.batch, delta);
         hud.render(game.batch, p1, p2, roundSystem);
-        updatePreviewTexture();
-        drawPreview();
+        previewOverlay.update();
+        previewOverlay.draw(game.batch);
         game.batch.end();
     }
 
@@ -103,7 +114,7 @@ public class GameScreen extends ScreenAdapter {
     public void show() {
         GestureReceiver.getInstance().start();
         if (controlMode != null && controlMode.startsWith("CAMERA")) {
-            previewReceiver.start();
+            previewOverlay.start();
         }
         game.soundManager.playMusic();
         KeyboardInput p1Input = new KeyboardInput(
@@ -126,39 +137,7 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void hide() {
-        previewReceiver.stop();
-    }
-
-    private void updatePreviewTexture() {
-        byte[] frame = previewReceiver.pollFrame();
-        if (frame == null) return;
-
-        Pixmap pixmap = new Pixmap(frame, 0, frame.length);
-        if (previewTexture == null
-            || previewTexture.getWidth() != pixmap.getWidth()
-            || previewTexture.getHeight() != pixmap.getHeight()) {
-            if (previewTexture != null) {
-                previewTexture.dispose();
-            }
-            previewTexture = new Texture(pixmap);
-        } else {
-            previewTexture.draw(pixmap, 0, 0);
-        }
-        previewWidth = pixmap.getWidth();
-        previewHeight = pixmap.getHeight();
-        pixmap.dispose();
-    }
-
-    private void drawPreview() {
-        if (previewTexture == null || previewWidth <= 0 || previewHeight <= 0) return;
-        float drawWidth = previewWidth;
-        float drawHeight = previewHeight;
-        if (drawWidth > PREVIEW_MAX_WIDTH) {
-            float scale = PREVIEW_MAX_WIDTH / drawWidth;
-            drawWidth *= scale;
-            drawHeight *= scale;
-        }
-        game.batch.draw(previewTexture, PREVIEW_MARGIN, PREVIEW_MARGIN, drawWidth, drawHeight);
+        previewOverlay.stop();
     }
 
     @Override
@@ -168,7 +147,7 @@ public class GameScreen extends ScreenAdapter {
         p2.dispose();
         effectManager.dispose();
         hud.dispose();
-        previewReceiver.stop();
-        if (previewTexture != null) previewTexture.dispose();
+        previewOverlay.stop();
+        previewOverlay.dispose();
     }
 }
