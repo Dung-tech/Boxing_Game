@@ -65,6 +65,7 @@ public final class Constants {
     public static final float SKILL_CUTSCENE_AUTO_RETURN_SECONDS = 4.5f;
     public static final float SKILL_CUTSCENE_TARGET_SECONDS = 6.0f;
     public static final float SKILL_ROUND_END_DELAY_SECONDS = 3.0f;
+    public static final float ROUND_SCOREBOARD_SECONDS = 4.0f;
     public static final int   TOTAL_ROUNDS      = 3;
     public static final int   ROUNDS_TO_WIN     = 2;
     public static final int   WIN_POINTS        = 1;
