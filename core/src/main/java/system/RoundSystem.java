@@ -4,11 +4,18 @@ import util.Constants;
 import entity.Fighter;
 
 public class RoundSystem {
+    public enum RoundResult {
+        P1,
+        P2,
+        DRAW
+    }
+
     private int currentRound = 1;
     private float timeLeft = Constants.ROUND_TIME;
     private boolean roundEnded = false;
     private int p1RoundWins = 0;
     private int p2RoundWins = 0;
+    private RoundResult lastRoundResult = RoundResult.DRAW;
     private boolean transitionReady = true;
     private float endDelayTimer = 0f;
     private float endDelayDuration = 0f;
@@ -33,24 +40,35 @@ public class RoundSystem {
 
     private void endCurrentRound(Fighter p1, Fighter p2) {
         roundEnded = true;
-        boolean skillKO = (p1.isDead() && p1.wasLastHitBySkill()) ||
-            (p2.isDead() && p2.wasLastHitBySkill());
-        startEndDelay(skillKO);
 
         if (p1.isDead() && !p2.isDead()) {
             p2RoundWins++;
+            lastRoundResult = RoundResult.P2;
         } else if (p2.isDead() && !p1.isDead()) {
             p1RoundWins++;
+            lastRoundResult = RoundResult.P1;
         } else if (p1.getHp() > p2.getHp()) {
             p1RoundWins++;
+            lastRoundResult = RoundResult.P1;
         } else if (p2.getHp() > p1.getHp()) {
             p2RoundWins++;
+            lastRoundResult = RoundResult.P2;
+        } else {
+            lastRoundResult = RoundResult.DRAW;
         }
         // Hòa thì không ai được điểm
+
+        boolean skillKO = (p1.isDead() && p1.wasLastHitBySkill()) ||
+            (p2.isDead() && p2.wasLastHitBySkill());
+        float delay = Constants.ROUND_SCOREBOARD_SECONDS;
+        if (skillKO) {
+            delay = Math.max(delay, Constants.SKILL_ROUND_END_DELAY_SECONDS);
+        }
+        startEndDelay(delay);
     }
 
-    private void startEndDelay(boolean delay) {
-        endDelayDuration = delay ? Constants.SKILL_ROUND_END_DELAY_SECONDS : 0f;
+    private void startEndDelay(float delaySeconds) {
+        endDelayDuration = delaySeconds;
         endDelayTimer = 0f;
         transitionReady = endDelayDuration <= 0f;
     }
@@ -61,6 +79,10 @@ public class RoundSystem {
 
     public boolean isTransitionReady() {
         return transitionReady;
+    }
+
+    public RoundResult getLastRoundResult() {
+        return lastRoundResult;
     }
 
     public boolean isMatchEnded() {
@@ -75,6 +97,7 @@ public class RoundSystem {
         currentRound++;
         timeLeft = Constants.ROUND_TIME;
         roundEnded = false;
+        lastRoundResult = RoundResult.DRAW;
         transitionReady = true;
         endDelayTimer = 0f;
         endDelayDuration = 0f;
@@ -91,6 +114,7 @@ public class RoundSystem {
         roundEnded = false;
         p1RoundWins = 0;
         p2RoundWins = 0;
+        lastRoundResult = RoundResult.DRAW;
         transitionReady = true;
         endDelayTimer = 0f;
         endDelayDuration = 0f;
