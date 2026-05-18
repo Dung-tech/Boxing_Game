@@ -406,8 +406,9 @@ def _open_camera_with_fallback(camera_index=0):
 
 def send_action(conn, player_tag, action, cache):
     now = time.monotonic()
-    last_action = cache[player_tag]["action"]
-    last_time = cache[player_tag]["time"]
+    cache_entry = cache[player_tag]
+    last_action = cache_entry["action"]
+    last_time = cache_entry["time"]
 
     # Burst gestures must always pass through; posture states are sent only on change/throttled.
     if action in STATE_ACTIONS and action == last_action and (now - last_time) < STATE_RESEND_INTERVAL:
@@ -422,8 +423,8 @@ def send_action(conn, player_tag, action, cache):
     except (BrokenPipeError, ConnectionResetError, OSError):
         return False
 
-    cache[player_tag]["action"] = action
-    cache[player_tag]["time"] = now
+    cache_entry["action"] = action
+    cache_entry["time"] = now
 
     if DEBUG_SEND:
         print(f"SENDING: {msg.strip()}")
@@ -433,8 +434,9 @@ def send_action(conn, player_tag, action, cache):
 
 def send_gym_action(conn, action, cache):
     now = time.monotonic()
-    last_action = cache["GYM"]["action"]
-    last_time = cache["GYM"]["time"]
+    cache_entry = cache["GYM"]
+    last_action = cache_entry["action"]
+    last_time = cache_entry["time"]
 
     if action == last_action and (now - last_time) < GYM_SEND_INTERVAL:
         return True
@@ -447,8 +449,8 @@ def send_gym_action(conn, action, cache):
     except (BrokenPipeError, ConnectionResetError, OSError):
         return False
 
-    cache["GYM"]["action"] = action
-    cache["GYM"]["time"] = now
+    cache_entry["action"] = action
+    cache_entry["time"] = now
     return True
 
 def main():
@@ -456,8 +458,9 @@ def main():
     if len(sys.argv) > 1:
         mode = sys.argv[1].strip().upper()
 
-    gym_mode = mode == "CAMERA_GYM_POSE"
-    server_port = 65433 if gym_mode else 65432
+    is_gym_mode = mode == "CAMERA_GYM_POSE"
+    is_pose_mode = mode == "CAMERA_POSE"
+    server_port = 65433 if is_gym_mode else 65432
 
     LOGGER.info("Selected mode=%s, server_port=%s", mode, server_port)
     _log_cv2_diagnostics()
@@ -531,11 +534,11 @@ def main():
     recognizer_p1 = None
     recognizer_p2 = None
 
-    if mode == "CAMERA_POSE":
+    if is_pose_mode:
         detector = PoseDetector()
         recognizer_p1 = PoseGestureRecognizer()
         recognizer_p2 = PoseGestureRecognizer()
-    elif mode == "CAMERA_GYM_POSE":
+    elif is_gym_mode:
         detector = GymPoseDetector()
         recognizer_p1 = GymPoseRecognizer()
         recognizer_p2 = None
@@ -550,7 +553,7 @@ def main():
         "GYM": {"action": None, "time": 0.0},
     }
     last_non_none_time = {"P1": time.monotonic(), "P2": time.monotonic()}
-    window_title = "Gym Pose Controller" if mode == "CAMERA_GYM_POSE" else "Boxing AI - 2 Players Mode"
+    window_title = "Gym Pose Controller" if is_gym_mode else "Boxing AI - 2 Players Mode"
     if preview_show_window:
         _setup_preview_window(window_title, cap)
 
@@ -562,7 +565,7 @@ def main():
             if not success:
                 read_failures += 1
                 LOGGER.warning("Camera read failed (count=%s, mode=%s)", read_failures, mode)
-                if mode == "CAMERA_GYM_POSE":
+                if is_gym_mode:
                     # Gym mode self-heals transient camera glitches instead of exiting.
                     cap.release()
                     time.sleep(0.05)
@@ -579,11 +582,11 @@ def main():
             h, w, _ = frame.shape
 
             # 3. --- NHAN DIEN ---
-            if mode == "CAMERA_POSE":
+            if is_pose_mode:
                 pose_results = detector.detect(frame)
                 gesture_p1 = recognizer_p1.recognize(pose_results["P1"])
                 gesture_p2 = recognizer_p2.recognize(pose_results["P2"])
-            elif mode == "CAMERA_GYM_POSE":
+            elif is_gym_mode:
                 try:
                     gym_landmarks = detector.detect(frame)
                     gesture_p1 = recognizer_p1.recognize(gym_landmarks)
@@ -598,7 +601,7 @@ def main():
                 gesture_p2 = recognizer_p2.recognize(results["P2"])
 
             now = time.monotonic()
-            if mode != "CAMERA_GYM_POSE":
+            if not is_gym_mode:
                 if gesture_p1 != "NONE":
                     last_non_none_time["P1"] = now
                 elif now - last_non_none_time["P1"] > NONE_TO_IDLE_TIMEOUT:
@@ -610,28 +613,27 @@ def main():
                     gesture_p2 = "IDLE"
 
             # --- XU LY PLAYER 1 (Ben trai) ---
-            if mode == "CAMERA_GYM_POSE":
+            if is_gym_mode:
                 gym_action = gesture_p1 if gesture_p1 != "NONE" else "NONE"
                 if not send_gym_action(conn, gym_action, send_cache):
                     print("Python: [INFO] Gym receiver da ngat, dong camera gym...")
                     break
             elif gesture_p1 != "NONE":
-                if mode != "CAMERA_GYM_POSE":
-                    if not send_action(conn, "P1", gesture_p1, send_cache):
-                        break
+                if not send_action(conn, "P1", gesture_p1, send_cache):
+                    break
             if gesture_p1 != "NONE":
                 cv2.putText(frame, f"P1: {gesture_p1}", (50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
             # --- XU LY PLAYER 2 (Ben phai) ---
-            if mode != "CAMERA_GYM_POSE" and gesture_p2 != "NONE":
+            if not is_gym_mode and gesture_p2 != "NONE":
                 if not send_action(conn, "P2", gesture_p2, send_cache):
                     break
                 cv2.putText(frame, f"P2: {gesture_p2}", (w//2 + 50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
             # 4. --- HIEN THI GUI ---
-            if mode != "CAMERA_GYM_POSE":
+            if not is_gym_mode:
                 # Ve vach ke chia doi man hinh
                 cv2.line(frame, (w//2, 0), (w//2, h), (255, 255, 0), 2)
                 cv2.putText(frame, "P1 AREA", (w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
