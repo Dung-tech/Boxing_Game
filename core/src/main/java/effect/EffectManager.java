@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 
+// Manages particle effects like hit sparks.
 public class EffectManager {
 
     // Danh sách các hiệu ứng đang chạy trên màn hình

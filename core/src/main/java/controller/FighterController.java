@@ -4,6 +4,7 @@ import entity.Fighter;
 import input.InputController;
 import util.Constants.Action;
 
+// Base controller that maps input to fighter actions each frame.
 public abstract class FighterController {
     protected Fighter fighter;
     protected InputController input;

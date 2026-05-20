@@ -2,6 +2,7 @@ package system;
 
 import entity.Gymer;
 
+// Gym mode state machine and menu selection logic.
 public class GymState {
     private static final float MESSI_STATE_INTERVAL = 2f;
 

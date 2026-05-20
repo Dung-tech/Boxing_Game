@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import static util.Constants.Action.*;
 
+// Fighter entity with action state, textures, and damage/skill handling.
 public class Fighter {
     private String controlMode;
     private float x, y;

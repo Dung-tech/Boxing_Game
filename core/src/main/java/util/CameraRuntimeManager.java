@@ -3,6 +3,7 @@ package util;
 import input.GestureReceiver;
 import input.GymGestureReceiver;
 
+// Stops camera-related background processes on shutdown.
 public final class CameraRuntimeManager {
     private CameraRuntimeManager() {
     }

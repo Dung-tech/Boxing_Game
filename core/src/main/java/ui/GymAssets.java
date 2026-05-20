@@ -2,6 +2,7 @@ package ui;
 
 import com.badlogic.gdx.graphics.Texture;
 
+// Loads and exposes textures used in gym mode.
 public class GymAssets {
     private Texture backgroundGym;
     private Texture messiEating;

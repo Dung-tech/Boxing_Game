@@ -6,6 +6,7 @@ import sound.SoundManager;
 import util.Constants;
 import util.Constants.Action;
 
+// Resolves attacks, blocks, damage, and hit effects.
 public class CombatSystem {
     private EffectManager effectManager;
     private SoundManager soundManager;

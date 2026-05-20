@@ -16,6 +16,7 @@ import util.AIControllerLauncher;
 import util.CameraRuntimeManager;
 import util.Constants;
 
+// Main menu screen with fight modes, gym, manual, and settings.
 public class MenuGame extends ScreenAdapter {
     private final Main game;
     private Texture background;

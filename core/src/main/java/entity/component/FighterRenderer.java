@@ -5,6 +5,7 @@ import util.Constants.Action;
 import java.util.HashMap;
 import java.util.Map;
 
+// Texture holder for fighter actions and hit feedback.
 public class FighterRenderer {
     private Map<Action, Texture> textures = new HashMap<>();
     private Texture hitTexture;

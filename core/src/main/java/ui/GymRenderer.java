@@ -12,6 +12,7 @@ import entity.Gymer;
 import system.GymState;
 import util.Constants;
 
+// Renders the gym mode scene, HUD, and countdown.
 public class GymRenderer {
     private final BitmapFont font;
     private final GlyphLayout layout;

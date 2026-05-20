@@ -14,6 +14,7 @@ import util.Constants;
 import java.util.ArrayList;
 import java.util.Collections;
 
+// Plays the skill cutscene frames and then returns to gameplay.
 public class SkillCutsceneScreen extends ScreenAdapter {
 
     private final Main game;

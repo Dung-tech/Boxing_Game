@@ -27,6 +27,7 @@ import system.RoundSystem;
 import java.util.HashMap;
 import java.util.Map;
 
+// Main fight screen handling gameplay loop, HUD, and round flow.
 public class GameScreen extends ScreenAdapter {
     private CombatSystem combatSystem;
     private GameHUD hud;

@@ -1,5 +1,6 @@
 package input;
 
+// Input abstraction for fighters (keyboard or camera).
 public interface InputController {
 
     boolean kick();

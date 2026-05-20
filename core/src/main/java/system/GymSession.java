@@ -4,6 +4,7 @@ import controller.GymerController;
 import entity.Gymer;
 import input.GymInputHandler;
 
+// Orchestrates gym mode loop: input, controller, and state.
 public class GymSession {
     private final Gymer gymer;
     private final GymerController gymerController;

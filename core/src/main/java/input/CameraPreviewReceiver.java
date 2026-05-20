@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReference;
 
+// Pulls low-res preview frames from the Python controller stream.
 public class CameraPreviewReceiver implements Runnable {
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 65434;

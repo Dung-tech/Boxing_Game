@@ -15,6 +15,7 @@ import util.AIControllerLauncher;
 import util.CameraRuntimeManager;
 import util.Constants;
 
+// Gym mini-game screen with countdown and camera-based training.
 public class GymScreen extends ScreenAdapter {
     private static final float COUNTDOWN_TOTAL_SECONDS = 4f;
     private final Main game;
