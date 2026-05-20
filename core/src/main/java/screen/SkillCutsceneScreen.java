@@ -75,6 +75,9 @@ public class SkillCutsceneScreen extends ScreenAdapter {
         Gdx.input.setInputProcessor(inputBlocker);
         discoverFrames();
         framesLoaded = !framePaths.isEmpty();
+        if (game.soundManager != null && "P1".equals(playerSide)) {
+            game.soundManager.playSiuu();
+        }
     }
 
     private void discoverFrames() {

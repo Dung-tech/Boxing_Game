@@ -14,6 +14,7 @@ public class AssetManagerWrapper {
         manager.load("sounds/kick.mp3", Sound.class);
         manager.load("sounds/glass_break.mp3", Sound.class);
         manager.load("sounds/CountDownSound.mp3", Sound.class);
+        manager.load("sounds/siuu.mp3", Sound.class);
 
         // GIỮ NGUYÊN TÊN FILE NHẠC NỀN CỦA BẠN
         manager.load("sounds/bg_music.mp3", Music.class);
