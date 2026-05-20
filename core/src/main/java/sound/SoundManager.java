@@ -16,7 +16,7 @@ public class SoundManager {
         END
     }
 
-    private Sound punch, kick, hit, glassBreak, countDown, siuu;
+    private Sound punch, kick, hit, glassBreak, countDown, siuu, ankaraMessi;
     private Music bgMusic, menuMusic, endMusic;
     private AssetManagerWrapper wrapper;
     private MusicState currentMusicState = MusicState.NONE;
@@ -36,6 +36,7 @@ public class SoundManager {
         this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
         this.countDown = wrapper.getAsset("sounds/CountDownSound.mp3", Sound.class);
         this.siuu = wrapper.getAsset("sounds/siuu.mp3", Sound.class);
+        this.ankaraMessi = wrapper.getAsset("sounds/ankara_messi.mp3", Sound.class);
         this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
         this.menuMusic = wrapper.getAsset("sounds/menu_music.mp3", Music.class);
         this.endMusic = wrapper.getAsset("sounds/end_music.mp3", Music.class);
@@ -74,6 +75,7 @@ public class SoundManager {
     public void playGlassBreak() { if (glassBreak != null) glassBreak.play(sfxVolume); }
     public void playCountDown() { if (countDown != null) countDown.play(sfxVolume); }
     public void playSiuu() { if (siuu != null) siuu.play(sfxVolume); }
+    public void playAnkaraMessi() { if (ankaraMessi != null) ankaraMessi.play(sfxVolume); }
 
     public void stopBackgroundMusic() {
         if (bgMusic != null) {
