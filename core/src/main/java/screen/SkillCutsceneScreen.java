@@ -227,6 +227,7 @@ public class SkillCutsceneScreen extends ScreenAdapter {
     private void returnToGame() {
         if (finished) return;
         finished = true;
+        stopCutsceneSounds();
         restoreInputProcessor();
         game.setScreen(returnScreen);
         dispose();
@@ -235,9 +236,17 @@ public class SkillCutsceneScreen extends ScreenAdapter {
     private void returnToMenu() {
         if (finished) return;
         finished = true;
+        stopCutsceneSounds();
         restoreInputProcessor();
         game.setScreen(new MenuGame(game));
         dispose();
+    }
+
+    private void stopCutsceneSounds() {
+        if (game.soundManager != null) {
+            game.soundManager.stopSiuu();
+            game.soundManager.stopAnkaraMessi();
+        }
     }
 
     @Override
