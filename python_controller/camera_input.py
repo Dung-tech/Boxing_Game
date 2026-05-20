@@ -4,6 +4,7 @@ import time
 import logging
 
 class CameraInput:
+    # Quan ly ket noi camera, co co che tu reconnect.
     def __init__(self, camera_id=0, width=640, height=480, reconnect_interval=5):
         self.camera_id = camera_id
         self.cap = None
@@ -13,6 +14,7 @@ class CameraInput:
         logging.basicConfig(level=logging.INFO)
 
     def open_camera(self):
+        # Mo camera va dat do phan giai mong muon.
         if self.cap is not None:
             self.cap.release()
         self.cap = cv2.VideoCapture(self.camera_id)
@@ -26,6 +28,7 @@ class CameraInput:
         return True
 
     def get_frame(self):
+        # Doc frame; neu loi thi thu ket noi lai sau mot khoang.
         # Mở camera nếu chưa mở
         if self.cap is None or not self.cap.isOpened():
             if not self.open_camera():

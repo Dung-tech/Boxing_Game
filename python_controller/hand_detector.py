@@ -1,4 +1,6 @@
+# Su dung MediaPipe Hands (mp_hands, mp_drawing) va OpenCV (cv2).
 class HandDetector:
+    # Dem ngon tay theo tung nua man hinh (P1/P2).
     def __init__(self):
         # max_num_hands=2 để AI quét cả 2 vùng màn hình
         self.hands = mp_hands.Hands(
@@ -9,6 +11,7 @@ class HandDetector:
         )
 
     def count_fingers(self, frame):
+        # Tra ve so ngon tay cho P1 va P2; -1 neu khong thay tay.
         # Reset kết quả là -1 (No Hand) mỗi frame
         results_dict = {"P1": -1, "P2": -1}
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

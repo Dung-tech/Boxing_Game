@@ -6,6 +6,7 @@ mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
 class HandDetector:
+    # Detect hands and count fingers for each screen half.
     def __init__(self):
         # max_num_hands=2 để AI quét cả 2 vùng màn hình
         self.hands = mp_hands.Hands(
@@ -16,6 +17,7 @@ class HandDetector:
         )
 
     def count_fingers(self, frame):
+        # Return finger counts for P1 (left) and P2 (right).
         # Reset kết quả là -1 (No Hand) mỗi frame
         results_dict = {"P1": -1, "P2": -1}
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)

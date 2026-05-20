@@ -4,6 +4,7 @@ from hand_detector import HandDetector
 from gesture_recognizer import GestureRecognizer
 
 def main():
+    # Vong lap chinh: doc camera, nhan cu chi, gui sang Java.
     # 1. --- SETUP SOCKET ---
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Cho phép chạy lại server ngay lập tức nếu bị crash (tránh lỗi Address already in use)
@@ -16,6 +17,7 @@ def main():
     print(f"Python: [CONNECTED] Da ket noi voi Java tai {addr}")
 
     # 2. --- KHOI TAO CAMERA & AI ---
+    # Khoi dong camera va cac bo nhan dien.
     cap = cv2.VideoCapture(0)
     detector = HandDetector()
     
@@ -39,6 +41,7 @@ def main():
             # --- XU LY PLAYER 1 (Ben trai) ---
             gesture_p1 = recognizer_p1.recognize(results["P1"])
             if gesture_p1 != "NONE":
+                # Gui hanh dong P1 qua socket theo dinh dang "P1:ACTION".
                 msg = f"P1:{gesture_p1}\n"
                 conn.sendall(msg.encode('utf-8'))
                 print(f"SENDING: {msg.strip()}")
@@ -48,6 +51,7 @@ def main():
             # --- XU LY PLAYER 2 (Ben phai) ---
             gesture_p2 = recognizer_p2.recognize(results["P2"])
             if gesture_p2 != "NONE":
+                # Gui hanh dong P2 qua socket theo dinh dang "P2:ACTION".
                 msg = f"P2:{gesture_p2}\n"
                 conn.sendall(msg.encode('utf-8'))
                 print(f"SENDING: {msg.strip()}")

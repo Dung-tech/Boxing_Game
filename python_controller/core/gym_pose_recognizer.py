@@ -13,11 +13,13 @@ ECCENTRIC_MIN_ANGLE = 50.0
 
 
 class GymPoseRecognizer:
+	# Recognize push-up phases using elbow angles.
 	def __init__(self):
 		self.state_history = deque(maxlen=HISTORY_SIZE)
 		self.last_stable_state = "CONCENTRIC"
 
 	def _lm(self, lms, idx):
+		# Read landmark tuple for easier math.
 		lm = lms.landmark[idx]
 		return lm.x, lm.y, lm.z, lm.visibility
 
@@ -25,6 +27,7 @@ class GymPoseRecognizer:
 		return math.hypot(a[0] - b[0], a[1] - b[1])
 
 	def _angle(self, a, b, c):
+		# Compute angle ABC in degrees, with safe normalization.
 		ba = (a[0] - b[0], a[1] - b[1])
 		bc = (c[0] - b[0], c[1] - b[1])
 		norm_ba = math.hypot(ba[0], ba[1])
@@ -35,6 +38,7 @@ class GymPoseRecognizer:
 		return math.degrees(math.acos(cos_val))
 
 	def recognize(self, pose_landmarks):
+		# Stable state machine for CONCENTRIC/ECCENTRIC.
 		if pose_landmarks is None:
 			self.state_history.clear()
 			return "NONE"
@@ -50,10 +54,12 @@ class GymPoseRecognizer:
 		lw = self._lm(pose_landmarks, LEFT_WRIST)
 		rw = self._lm(pose_landmarks, RIGHT_WRIST)
 
+		# Ensure key joints are visible before computing angles.
 		critical_vis = [ls[3], rs[3], le[3], re[3], lw[3], rw[3]]
 		if min(critical_vis) < VISIBILITY_MIN:
 			return "NONE"
 
+		# Reject partial frames where shoulders are too close.
 		shoulder_width = max(1e-4, self._dist(ls, rs))
 		if shoulder_width < 0.06:
 			return "NONE"

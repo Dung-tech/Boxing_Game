@@ -1,4 +1,5 @@
 class GestureRecognizer:
+    # Nhan dien chi so ngon tay thanh hanh dong; co co che chong spam.
     def __init__(self):
         self.ready_for_next = True
         self.finger_history = []
@@ -6,6 +7,7 @@ class GestureRecognizer:
         self.required_frames = 2 
 
     def recognize(self, finger_count):
+        # Tra ve label hanh dong hoac "NONE" neu chua on dinh.
         # Nếu không thấy tay, reset trạng thái ngay lập tức
         if finger_count == -1:
             self.finger_history.clear()
