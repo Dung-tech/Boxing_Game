@@ -1,5 +1,7 @@
 package util;
 
+import com.badlogic.gdx.Input;
+
 public final class Constants {
 
     private Constants() {}
@@ -11,10 +13,10 @@ public final class Constants {
     public static final int TARGET_FPS    = 60;
 
     // --- CHỈ SỐ VÕ SĨ (20 MÁU - 10 MANA) ---
-    public static final int   MAX_HP            = 20;    // Đấm 20 phát là đi
+    public static final int   MAX_HP            = 30;    // Đấm 20 phát là đi
     public static final float MAX_MANA          = 10f;   // Đủ 10 là nổ Skill
-    public static final float GROUND_Y          = 100f;  // Đứng cố định trên sàn
-    public static final float CHAR_SIZE         = 200f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
+    public static final float GROUND_Y          = 40f;  // Đứng cố định trên sàn
+    public static final float CHAR_SIZE         = 520f;  // Cho nhân vật to lên nhìn cho sướng (vì ko di chuyển)
 
     // --- CHỈ SỐ SÁT THƯƠNG (1 MÁU/ĐÒN) ---
     public static final float DAMAGE_PUNCH      = 1f;
@@ -40,7 +42,13 @@ public final class Constants {
         HIT,        // Bị dính đòn (Trạng thái thụ động)
         DEAD        // Thua
     }
+    public enum ControlMode {
+        KEYBOARD,
+        CAMERA_AI,
+        CAMERA_POSE
+    }
 
+    // Thêm vào Constants.java
     public enum Side { LEFT, RIGHT }
     public enum GameState { MENU, PLAYING, PAUSED, GAME_OVER }
 
@@ -51,4 +59,14 @@ public final class Constants {
     public static final String SFX_KICK      = "sounds/sfx/kick.wav";
     public static final String SFX_SKILL     = "sounds/sfx/ultimate.mp3";
     public static final String SFX_HIT       = "sounds/sfx/hit.mp3";
+    public static final String SKILL_VIDEO_P1 = "videos/skill/skill_p1.mp4";
+    public static final String SKILL_VIDEO_P2 = "videos/skill/skill_p2.mp4";
+    public static final float SKILL_CUTSCENE_MIN_SECONDS = 1.2f;
+    public static final float SKILL_CUTSCENE_AUTO_RETURN_SECONDS = 4.5f;
+    public static final float SKILL_CUTSCENE_TARGET_SECONDS = 6.0f;
+    public static final float SKILL_ROUND_END_DELAY_SECONDS = 3.0f;
+    public static final float ROUND_SCOREBOARD_SECONDS = 4.0f;
+    public static final int   TOTAL_ROUNDS      = 3;
+    public static final int   ROUNDS_TO_WIN     = 2;
+    public static final int   WIN_POINTS        = 1;
 }

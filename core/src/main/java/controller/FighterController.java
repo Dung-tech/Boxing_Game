@@ -1,32 +1,33 @@
 package controller;
 
 import entity.Fighter;
-import input.GestureReceiver;
+import input.InputController;
+import util.Constants.Action;
 
 public abstract class FighterController {
     protected Fighter fighter;
-    protected int playerId; // 1 cho P1, 2 cho P2
+    protected InputController input;
 
-    public FighterController(Fighter fighter, int playerId) {
+    public FighterController(Fighter fighter, InputController input) {
         this.fighter = fighter;
-        this.playerId = playerId;
+        this.input = input;
     }
 
-    /**
-     * Hàm này được gọi liên tục trong vòng lặp Render của Game (LibGDX)
-     */
     public void update(float delta) {
-        if (fighter == null) return;
-
-        // Lấy hành động từ "ngăn chứa" riêng của Player này trong GestureReceiver
-        String action = GestureReceiver.getInstance().getActionForPlayer(playerId);
-
-        // Nếu có hành động thực sự (khác NONE) thì mới xử lý
-        if (action != null && !action.equals("NONE")) {
-            handleAction(action);
+        input.update(delta);
+        if (input.skill()) {
+            fighter.performAction(Action.SKILL);
+        } else if (input.punch()) {
+            fighter.performAction(Action.PUNCH);
+        } else if (input.kick()) {
+            fighter.performAction(Action.KICK);
+        } else if (input.duck()) {
+            fighter.performAction(Action.DUCK);
+        } else if (input.block()) {
+            fighter.performAction(Action.BLOCK);
         }
-    }
+        else fighter.performAction(Action.IDLE);
 
-    // Mỗi người chơi có thể có logic xử lý khác nhau nếu cần
-    protected abstract void handleAction(String action);
+        input.reset();
+    }
 }

@@ -12,6 +12,7 @@ buildscript {
 }
 plugins {
   id "application"
+  id "com.gradleup.shadow" version "9.2.0" apply false
 }
 apply plugin: 'io.github.fourlastor.construo'
 
@@ -51,25 +52,30 @@ run {
   if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
 
+// Gradle 9 removed StartScripts.mainClassName; expose a compatible extra property
+// before applying Shadow so startShadowScripts can be created safely.
+startScripts {
+  ext.mainClassName = application.mainClass.get()
+}
+apply plugin: 'com.gradleup.shadow'
+
 jar {
-// sets the name of the .jar file this produces to the name of the game or app, with the version after.
-  archiveFileName.set("${appName}-${projectVersion}.jar")
-// the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
+// Keep regular jar as thin artifact; fat packaging is handled by shadowJar.
+  archiveFileName.set("${appName}-${projectVersion}-thin.jar")
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-  dependsOn configurations.runtimeClasspath
-  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-// these "exclude" lines remove some unnecessary duplicate files in the output JAR.
-  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
-  dependencies {
-    exclude('META-INF/INDEX.LIST', 'META-INF/maven/**')
-  }
-// setting the manifest makes the JAR runnable.
-// enabling native access helps avoid a warning when Java 24 or later runs the JAR.
-// setting Multi-Release to true allows LWJGL3 to use different classes on recent Java versions.
   manifest {
     attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED', 'Multi-Release': 'true'
   }
-// this last step may help on some OSes that need extra instruction to make runnable JARs.
+}
+
+tasks.named('shadowJar') {
+  archiveFileName.set("${appName}-${projectVersion}.jar")
+  archiveClassifier.set("")
+  mergeServiceFiles()
+  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/maven/**')
+  manifest {
+    attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED', 'Multi-Release': 'true'
+  }
   doLast {
     file(archiveFile).setExecutable(true, false)
   }
@@ -163,7 +169,7 @@ construo {
 
 // Equivalent to the jar task; here for compatibility with gdx-setup.
 tasks.register('dist') {
-  dependsOn 'jar'
+  dependsOn 'shadowJar'
 }
 
 distributions {
@@ -171,7 +177,7 @@ distributions {
     contents {
       into('libs') {
         project.configurations.runtimeClasspath.files.findAll { file ->
-          file.getName() != project.tasks.jar.outputs.files.singleFile.name
+          file.getName() != project.tasks.shadowJar.outputs.files.singleFile.name
         }.each { file ->
           exclude file.name
         }
@@ -180,8 +186,8 @@ distributions {
   }
 }
 
-startScripts.dependsOn(':lwjgl3:jar')
-startScripts.classpath = project.tasks.jar.outputs.files
+startScripts.dependsOn(':lwjgl3:shadowJar')
+startScripts.classpath = project.tasks.shadowJar.outputs.files
 
 if(enableGraalNative == 'true') {
   apply from: file("nativeimage.gradle")
