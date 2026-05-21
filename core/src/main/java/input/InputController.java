@@ -13,6 +13,10 @@ public interface InputController {
 
     boolean skill();
 
+    boolean moveLeft();
+
+    boolean moveRight();
+
     String getNextAction();
 
     void update(float delta);

@@ -31,6 +31,8 @@ public final class Constants {
     // --- THÔNG SỐ TRẬN ĐẤU ---
     public static final float ROUND_TIME        = 180f;
     public static final int   PORT_UDP_PYTHON   = 5005;
+    public static final float MOVE_SPEED        = 300f;  // Tốc độ di chuyển
+    public static final float ATTACK_RANGE      = 300f;  // Khoảng cách đánh trúng đòn
 
     // --- 5 HÀNH ĐỘNG DUY NHẤT ---
     public enum Action {

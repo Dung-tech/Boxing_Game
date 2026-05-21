@@ -26,6 +26,20 @@ public class CombatSystem {
         if (!attacker.isAttacking() || attacker.getStats().hasHit) return;
 
         Action atk = attacker.getCurrentState();
+
+        // Kiểm tra tầm đánh (SKILL có tầm đánh toàn màn hình, PUNCH và KICK giới hạn bởi khoảng cách cơ thể)
+        if (atk != Action.SKILL) {
+            Fighter left = (attacker.getX() < target.getX()) ? attacker : target;
+            Fighter right = (attacker.getX() < target.getX()) ? target : attacker;
+
+            float leftRightEdge = left.getX() + left.getWidth();
+            float rightLeftEdge = right.getX();
+            float gap = rightLeftEdge - leftRightEdge; // Khoảng cách thực tế giữa 2 nhân vật
+
+            if (gap > 100f) {
+                return; // Đứng quá xa, đánh hụt!
+            }
+        }
         Action def = target.getCurrentState();
         boolean isBlocked = false;
 
@@ -55,6 +69,10 @@ public class CombatSystem {
 
         // Hiệu ứng + âm thanh
         effectManager.spawnHitEffect(target.getX() + 100, target.getY() + 100);
-        soundManager.playHit();
+        if (attackType == Action.PUNCH) {
+            soundManager.playPunch();
+        } else if (attackType == Action.KICK) {
+            soundManager.playKick();
+        }
     }
 }

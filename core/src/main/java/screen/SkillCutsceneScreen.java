@@ -230,6 +230,12 @@ public class SkillCutsceneScreen extends ScreenAdapter {
         finished = true;
         stopCutsceneSounds();
         restoreInputProcessor();
+
+        // Phát tiếng dính đòn (hit.mp3) sau khi kết thúc skill
+        if (game.soundManager != null) {
+            game.soundManager.playHit();
+        }
+
         game.setScreen(returnScreen);
         dispose();
     }

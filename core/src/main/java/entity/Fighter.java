@@ -14,6 +14,7 @@ import static util.Constants.Action.*;
 public class Fighter {
     private String controlMode;
     private float x, y;
+    private float startX;
     private Constants.Side side;
     private FighterStats stats;
     private Map<Action, Texture> textures = new HashMap<>();
@@ -37,6 +38,7 @@ public class Fighter {
         this.x = (side == Constants.Side.LEFT) ?
             Constants.APP_WIDTH * 0.30f :     // Ronaldo (bên trái)
             Constants.APP_WIDTH * 0.45f;      // Messi (bên phải)
+        this.startX = this.x;
         loadTextures(folderPath);
     }
 
@@ -61,13 +63,6 @@ public class Fighter {
         // textures.put("HIT_DUCK", new Texture(path + "/hit_duck.png"));
     }
     private String getManualInput() {
-        if (side == Constants.Side.LEFT) {
-            if (com.badlogic.gdx.Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.A)) return "PUNCH";
-            if (com.badlogic.gdx.Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.D)) return "KICK";
-            // ... thêm các phím khác của P1 ...
-        } else {
-            // ... check phím của P2 ...
-        }
         return "NONE";
     }
 
@@ -181,6 +176,26 @@ public class Fighter {
     public Action getCurrentState() { return currentState; }
     public FighterStats getStats() { return stats; }
     public float getX() { return x; }
+    public void setX(float x) { this.x = x; }
+
+    public float getWidth() {
+        Texture idleTex = textures.get(Action.IDLE);
+        if (idleTex != null) {
+            return Constants.CHAR_SIZE * (idleTex.getWidth() / (float) idleTex.getHeight());
+        }
+        return 200f; // fallback
+    }
+
+    public void move(float deltaX) {
+        if (isDead || currentState == HIT) return; // Không di chuyển khi chết hoặc đang bị dính đòn
+        this.x += deltaX;
+
+        // Giới hạn biên màn hình
+        float width = getWidth();
+        if (this.x < 0) this.x = 0;
+        if (this.x > Constants.APP_WIDTH - width) this.x = Constants.APP_WIDTH - width;
+    }
+
     public float getY() { return y; }
     public int getHp() { return stats.hp; }
     public float getMana() { return stats.mana; }
@@ -240,6 +255,7 @@ public class Fighter {
     }
 
     public void reset() {
+        this.x = this.startX;
         stats.hp = Constants.MAX_HP;
         stats.mana = Constants.MAX_MANA;
         isDead = false;

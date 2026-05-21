@@ -26,8 +26,14 @@ public abstract class FighterController {
             fighter.performAction(Action.DUCK);
         } else if (input.block()) {
             fighter.performAction(Action.BLOCK);
+        } else {
+            fighter.performAction(Action.IDLE);
+            if (input.moveLeft()) {
+                fighter.move(-util.Constants.MOVE_SPEED * delta);
+            } else if (input.moveRight()) {
+                fighter.move(util.Constants.MOVE_SPEED * delta);
+            }
         }
-        else fighter.performAction(Action.IDLE);
 
         input.reset();
     }

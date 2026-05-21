@@ -162,6 +162,16 @@ public class GestureReceiver implements InputController, Runnable {
     }
 
     @Override
+    public boolean moveLeft() {
+        return false;
+    }
+
+    @Override
+    public boolean moveRight() {
+        return false;
+    }
+
+    @Override
     public void update(float delta) {
 
     }
