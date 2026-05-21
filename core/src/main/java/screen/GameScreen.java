@@ -19,6 +19,7 @@ import input.KeyboardInput;
 import main.Main;
 import entity.Fighter;
 import system.CombatSystem;
+import sound.SoundManager;
 import ui.CameraPreviewOverlay;
 import ui.GameHUD;
 import util.Constants;
@@ -56,6 +57,8 @@ public class GameScreen extends ScreenAdapter {
     private float countdownStepTimer = 0f;
     private static final float COUNTDOWN_STEP_SECONDS = 1.0f;
     private static final float COUNTDOWN_FIRST_HOLD_SECONDS = 1.0f;
+    private boolean restMusicActive = false;
+    private boolean matchEndSilenced = false;
 
     public GameScreen(Main game, String mode) {
         this.game = game;
@@ -119,6 +122,7 @@ public class GameScreen extends ScreenAdapter {
                 }
             }
 
+            updateRestMusicState();
             gameStateManager.update(p1, p2, roundSystem);
         }
 
@@ -227,6 +231,32 @@ public class GameScreen extends ScreenAdapter {
         game.batch.draw(texture, x, y, drawW, drawH);
     }
 
+    private void updateRestMusicState() {
+        if (game.soundManager == null) return;
+        boolean roundEnded = roundSystem.isRoundEnded();
+        boolean matchEnded = roundSystem.isMatchEnded();
+
+        if (roundEnded && matchEnded) {
+            if (!matchEndSilenced) {
+                game.soundManager.transitionToMusicState(SoundManager.MusicState.NONE);
+                matchEndSilenced = true;
+            }
+            restMusicActive = false;
+            return;
+        }
+
+        matchEndSilenced = false;
+        if (roundEnded) {
+            if (!restMusicActive) {
+                game.soundManager.playRestMusic();
+                restMusicActive = true;
+            }
+        } else if (restMusicActive) {
+            game.soundManager.playMusic();
+            restMusicActive = false;
+        }
+    }
+
     private void addScoreboardTexture(String key, String path) {
         FileHandle file = Gdx.files.internal(path);
         if (file.exists()) {
@@ -301,10 +331,16 @@ public class GameScreen extends ScreenAdapter {
 
     private boolean showSkillCutsceneIfNeeded() {
         if (p1.consumeSkillCutsceneTrigger()) {
+            if (game.soundManager != null) {
+                game.soundManager.playSiuu();
+            }
             game.setScreen(new SkillCutsceneScreen(game, this, "P1"));
             return true;
         }
         if (p2.consumeSkillCutsceneTrigger()) {
+            if (game.soundManager != null) {
+                game.soundManager.playAnkaraMessi();
+            }
             game.setScreen(new SkillCutsceneScreen(game, this, "P2"));
             return true;
         }

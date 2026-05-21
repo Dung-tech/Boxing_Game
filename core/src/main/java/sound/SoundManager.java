@@ -8,17 +8,19 @@ import util.AssetManagerWrapper;
 public class SoundManager {
     private static final float MENU_MUSIC_BASE_VOLUME = 0.5f;
     private static final float FIGHT_MUSIC_BASE_VOLUME = 0.25f;
+    private static final float REST_MUSIC_BASE_VOLUME = 0.4f;
     private static final float END_MUSIC_BASE_VOLUME = 0.7f;
 
     public enum MusicState {
         NONE,
         MENU,
         FIGHT,
+        REST,
         END
     }
 
-    private Sound punch, kick, hit, glassBreak, countDown, countDownGym;
-    private Music bgMusic, menuMusic, endMusic;
+    private Sound punch, kick, hit, glassBreak, countDown, countDownGym, siuu, ankaraMessi;
+    private Music bgMusic, restMusic, menuMusic, endMusic;
     private AssetManagerWrapper wrapper;
     private MusicState currentMusicState = MusicState.NONE;
     private float musicVolume = 1.0f;
@@ -37,7 +39,10 @@ public class SoundManager {
         this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
         this.countDown = wrapper.getAsset("sounds/CountDownSound.mp3", Sound.class);
         this.countDownGym = wrapper.getAsset("sounds/countDownGym.mp3", Sound.class);
+        this.siuu = wrapper.getAsset("sounds/siuu.mp3", Sound.class);
+        this.ankaraMessi = wrapper.getAsset("sounds/ankara_messi.mp3", Sound.class);
         this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
+        this.restMusic = wrapper.getAsset("sounds/rest_music.mp3", Music.class);
         this.menuMusic = wrapper.getAsset("sounds/menu_music.mp3", Music.class);
         this.endMusic = wrapper.getAsset("sounds/end_music.mp3", Music.class);
     }
@@ -49,6 +54,10 @@ public class SoundManager {
 
     public void playMenuMusic() {
         transitionToMusicState(MusicState.MENU);
+    }
+
+    public void playRestMusic() {
+        transitionToMusicState(MusicState.REST);
     }
 
     public void playEndMusic() {
@@ -75,6 +84,8 @@ public class SoundManager {
     public void playGlassBreak() { if (glassBreak != null) glassBreak.play(sfxVolume); }
     public void playCountDown() { if (countDown != null) countDown.play(sfxVolume); }
     public void playCountDownGym() { if (countDownGym != null) countDownGym.play(sfxVolume); }
+    public void playSiuu() { if (siuu != null) siuu.play(sfxVolume); }
+    public void playAnkaraMessi() { if (ankaraMessi != null) ankaraMessi.play(sfxVolume); }
 
     public void stopBackgroundMusic() {
         if (bgMusic != null) {
@@ -102,6 +113,9 @@ public class SoundManager {
                 break;
             case FIGHT:
                 startMusic(bgMusic, true, FIGHT_MUSIC_BASE_VOLUME);
+                break;
+            case REST:
+                startMusic(restMusic, true, REST_MUSIC_BASE_VOLUME);
                 break;
             case END:
                 startMusic(endMusic, true, END_MUSIC_BASE_VOLUME);
@@ -133,6 +147,9 @@ public class SoundManager {
                 break;
             case FIGHT:
                 applyMusicVolume(bgMusic, FIGHT_MUSIC_BASE_VOLUME);
+                break;
+            case REST:
+                applyMusicVolume(restMusic, REST_MUSIC_BASE_VOLUME);
                 break;
             case END:
                 applyMusicVolume(endMusic, END_MUSIC_BASE_VOLUME);
@@ -167,6 +184,7 @@ public class SoundManager {
     private void stopAllMusicInternal() {
         if (menuMusic != null) menuMusic.stop();
         if (bgMusic != null) bgMusic.stop();
+        if (restMusic != null) restMusic.stop();
         if (endMusic != null) endMusic.stop();
     }
 
@@ -176,6 +194,8 @@ public class SoundManager {
                 return menuMusic != null && menuMusic.isPlaying();
             case FIGHT:
                 return bgMusic != null && bgMusic.isPlaying();
+            case REST:
+                return restMusic != null && restMusic.isPlaying();
             case END:
                 return endMusic != null && endMusic.isPlaying();
             case NONE:
