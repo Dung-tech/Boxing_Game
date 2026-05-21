@@ -4,7 +4,6 @@ import mediapipe as mp
 
 
 def select_pose_model_complexity(default=0):
-    # Prefer lite/full pose models when present to match installation.
     base_dir = os.path.dirname(mp.__file__)
     lite_path = os.path.join(base_dir, "modules", "pose_landmark", "pose_landmark_lite.tflite")
     if os.path.exists(lite_path):

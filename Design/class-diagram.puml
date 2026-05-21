@@ -89,6 +89,24 @@ package "util" {
   class CameraRuntimeManager
 }
 
+package "python_controller" {
+  class PyMain <<module>>
+  class CameraInput
+  class "HandDetector" as PyHandDetector
+  class "GestureRecognizer" as PyGestureRecognizer
+}
+
+package "python_controller.core" {
+  class PyCoreMain <<module>>
+  class "HandDetector" as CoreHandDetector
+  class "GestureRecognizer" as CoreGestureRecognizer
+  class PoseDetector
+  class GymPoseDetector
+  class PoseGestureRecognizer
+  class GymPoseRecognizer
+  class MediaPipeUtils <<module>>
+}
+
 Main --> MenuGame : setScreen()
 Main --> SoundManager : owns
 Main --> CameraRuntimeManager : shutdownAll()
@@ -158,4 +176,22 @@ CameraPreviewOverlay --> CameraPreviewReceiver
 SoundManager --> AssetManagerWrapper
 
 GymInputHandler --> GymState
+
+PyMain --> PyHandDetector
+PyMain --> PyGestureRecognizer
+
+PyCoreMain --> CoreHandDetector
+PyCoreMain --> CoreGestureRecognizer
+PyCoreMain --> PoseDetector
+PyCoreMain --> GymPoseDetector
+PyCoreMain --> PoseGestureRecognizer
+PyCoreMain --> GymPoseRecognizer
+
+PoseDetector --> MediaPipeUtils
+GymPoseDetector --> MediaPipeUtils
+
+AIControllerLauncher ..> PyCoreMain : launches
+GestureReceiver ..> PyCoreMain : TCP actions
+GymGestureReceiver ..> PyCoreMain : TCP gym
+CameraPreviewReceiver ..> PyCoreMain : preview stream
 @enduml

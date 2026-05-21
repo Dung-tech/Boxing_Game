@@ -3,9 +3,8 @@ import math
 import time
 
 
-# Shared tuning constants (global profile for both players/camera halves)
 POSTURE_HISTORY_SIZE = 4
-POSTURE_STABILITY_MIN = 2  # 2/4 for posture stabilization
+POSTURE_STABILITY_MIN = 2
 
 VISIBILITY_MIN = 0.30
 BURST_COOLDOWN = 0.22
@@ -37,7 +36,6 @@ KICK_ELBOW_UP_FACTOR = 0.02
 
 
 class PoseGestureRecognizer:
-    # Recognize posture (idle/block/duck) plus burst actions (punch/kick/skill).
     def __init__(self):
         self.posture_history = deque(maxlen=POSTURE_HISTORY_SIZE)
         self.ready_for_next = True
@@ -46,7 +44,6 @@ class PoseGestureRecognizer:
         self.last_stable_posture = "IDLE"
         self.deadband_until = 0.0
 
-        # Baselines are learned when the player stands idle.
         self.base_hip_y = None
         self.base_nose_y = None
         self.base_left_wrist_z = None
@@ -58,10 +55,8 @@ class PoseGestureRecognizer:
         self.prev_right_wrist_y = None
         self.prev_left_wrist_z = None
         self.prev_right_wrist_z = None
-        # ...existing code...
 
     def _lm(self, lms, idx):
-        # Read landmark tuple once to keep math cleaner.
         lm = lms.landmark[idx]
         return lm.x, lm.y, lm.z, lm.visibility
 
@@ -69,24 +64,20 @@ class PoseGestureRecognizer:
         return math.hypot(a[0] - b[0], a[1] - b[1])
 
     def recognize(self, pose_landmarks):
-        # Core pose-to-action pipeline with stabilization and cooldowns.
         now = time.monotonic()
         if pose_landmarks is None:
             self.posture_history.clear()
-            # User rule: if body disappears from camera, treat as DUCK.
             self.ready_for_next = True
             self.last_stable_posture = "DUCK"
             return "DUCK"
 
         lms = pose_landmarks
 
-        # MediaPipe Pose landmark indexes
         NOSE = 0
         LEFT_SHOULDER, RIGHT_SHOULDER = 11, 12
         LEFT_ELBOW, RIGHT_ELBOW = 13, 14
         LEFT_WRIST, RIGHT_WRIST = 15, 16
         LEFT_HIP, RIGHT_HIP = 23, 24
-        # ...existing code...
 
         nose = self._lm(lms, NOSE)
         ls = self._lm(lms, LEFT_SHOULDER)
@@ -97,16 +88,12 @@ class PoseGestureRecognizer:
         rw = self._lm(lms, RIGHT_WRIST)
         lh = self._lm(lms, LEFT_HIP)
         rh = self._lm(lms, RIGHT_HIP)
-        # ...existing code...
 
-        # Visibility gating to avoid noisy actions when landmarks fade.
         critical_vis = [ls[3], rs[3], lw[3], rw[3], lh[3], rh[3]]
         if min(critical_vis) < VISIBILITY_MIN:
-            # Low visibility is treated as a successful hide/duck.
             self.last_stable_posture = "DUCK"
             return "DUCK"
 
-        # Normalize thresholds by body proportions.
         shoulder_width = max(1e-4, self._dist(ls, rs))
         mid_shoulder_y = (ls[1] + rs[1]) * 0.5
         mid_hip_y = (lh[1] + rh[1]) * 0.5
@@ -114,7 +101,6 @@ class PoseGestureRecognizer:
         chest_y = mid_shoulder_y + 0.25 * torso_len
         center_x = (ls[0] + rs[0]) * 0.5
 
-        # Update running baselines in stable posture only.
         if self.base_hip_y is None:
             self.base_hip_y = mid_hip_y
             self.base_nose_y = nose[1]
@@ -129,7 +115,6 @@ class PoseGestureRecognizer:
                 self.base_left_wrist_z = (1 - alpha) * self.base_left_wrist_z + alpha * lw[2]
                 self.base_right_wrist_z = (1 - alpha) * self.base_right_wrist_z + alpha * rw[2]
 
-        # -------- Posture states --------
         left_guard = abs(lw[0] - ls[0]) < GUARD_X_FACTOR * shoulder_width and abs(lw[1] - chest_y) < GUARD_Y_FACTOR * torso_len
         right_guard = abs(rw[0] - rs[0]) < GUARD_X_FACTOR * shoulder_width and abs(rw[1] - chest_y) < GUARD_Y_FACTOR * torso_len
         is_idle = left_guard and right_guard
@@ -144,7 +129,6 @@ class PoseGestureRecognizer:
         is_duck = duck_hip and duck_head
 
         posture = "NONE"
-        # Block-first precedence for ambiguous overlap.
         if is_block:
             posture = "BLOCK"
         elif is_duck:
@@ -152,7 +136,6 @@ class PoseGestureRecognizer:
         elif is_idle:
             posture = "IDLE"
 
-        # Stabilize posture with small history window.
         self.posture_history.append(posture)
         stable_posture = "NONE"
         if len(self.posture_history) == self.posture_history.maxlen:
@@ -160,7 +143,6 @@ class PoseGestureRecognizer:
             duck_count = self.posture_history.count("DUCK")
             idle_count = self.posture_history.count("IDLE")
 
-            # Explicit 2/4 stabilization for BLOCK/DUCK.
             if block_count >= POSTURE_STABILITY_MIN:
                 stable_posture = "BLOCK"
             elif duck_count >= POSTURE_STABILITY_MIN:
@@ -174,7 +156,6 @@ class PoseGestureRecognizer:
         if stable_posture in {"IDLE", "BLOCK", "DUCK"}:
             self.last_stable_posture = stable_posture
 
-        # Match finger-mode gate: only IDLE re-arms burst actions.
         if stable_posture == "IDLE":
             self.ready_for_next = True
 
@@ -184,7 +165,6 @@ class PoseGestureRecognizer:
             and (now - self.last_burst_time) >= self.burst_cooldown
         )
 
-        # -------- Burst gestures --------
         prev_lx = lw[0] if self.prev_left_wrist_x is None else self.prev_left_wrist_x
         prev_rx = rw[0] if self.prev_right_wrist_x is None else self.prev_right_wrist_x
         prev_ly = lw[1] if self.prev_left_wrist_y is None else self.prev_left_wrist_y
@@ -199,13 +179,11 @@ class PoseGestureRecognizer:
         left_motion = abs(lw[0] - prev_lx) + abs(lw[1] - prev_ly) > PUNCH_MOTION_MIN
         right_motion = abs(rw[0] - prev_rx) + abs(rw[1] - prev_ry) > PUNCH_MOTION_MIN
 
-        # Make punch stricter: hand must be clearly extended and moving.
         is_left_punch = left_ext and (left_motion or left_thrust)
         is_right_punch = right_ext and (right_motion or right_thrust)
         is_double_punch = is_left_punch and is_right_punch
         is_single_punch = is_left_punch != is_right_punch
 
-        # KICK rule (pose mode): raise exactly one hand high, similar to waving one arm up.
         left_hand_high = lw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and lw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
         right_hand_high = rw[1] < (mid_shoulder_y - KICK_HAND_UP_SHOULDER_FACTOR * torso_len) and rw[1] < (nose[1] + KICK_HAND_UP_NOSE_FACTOR * torso_len)
         left_arm_up_shape = lw[1] < (le[1] - KICK_ELBOW_UP_FACTOR * torso_len)
@@ -223,11 +201,8 @@ class PoseGestureRecognizer:
         self.prev_right_wrist_y = rw[1]
         self.prev_left_wrist_z = lw[2]
         self.prev_right_wrist_z = rw[2]
-        # ...existing code...
 
         if can_burst:
-            # Burst gestures fire once, then require IDLE to re-arm.
-            # User mapping: SKILL = punch with both hands simultaneously.
             if is_double_punch:
                 self.ready_for_next = False
                 self.last_burst_time = now
@@ -247,5 +222,4 @@ class PoseGestureRecognizer:
         if stable_posture != "NONE":
             return stable_posture
 
-        # Any non-matching posture falls back to default IDLE state.
         return "IDLE"
