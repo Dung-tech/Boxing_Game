@@ -41,7 +41,6 @@ class PoseGestureRecognizer:
         self.ready_for_next = True
         self.last_burst_time = 0.0
         self.burst_cooldown = BURST_COOLDOWN
-        self.last_stable_posture = "IDLE"
         self.deadband_until = 0.0
 
         self.base_hip_y = None
@@ -68,7 +67,6 @@ class PoseGestureRecognizer:
         if pose_landmarks is None:
             self.posture_history.clear()
             self.ready_for_next = True
-            self.last_stable_posture = "DUCK"
             return "DUCK"
 
         lms = pose_landmarks
@@ -91,7 +89,6 @@ class PoseGestureRecognizer:
 
         critical_vis = [ls[3], rs[3], lw[3], rw[3], lh[3], rh[3]]
         if min(critical_vis) < VISIBILITY_MIN:
-            self.last_stable_posture = "DUCK"
             return "DUCK"
 
         shoulder_width = max(1e-4, self._dist(ls, rs))
@@ -99,7 +96,6 @@ class PoseGestureRecognizer:
         mid_hip_y = (lh[1] + rh[1]) * 0.5
         torso_len = max(1e-4, abs(mid_hip_y - mid_shoulder_y))
         chest_y = mid_shoulder_y + 0.25 * torso_len
-        center_x = (ls[0] + rs[0]) * 0.5
 
         if self.base_hip_y is None:
             self.base_hip_y = mid_hip_y
@@ -149,12 +145,6 @@ class PoseGestureRecognizer:
                 stable_posture = "DUCK"
             elif idle_count >= POSTURE_STABILITY_MIN:
                 stable_posture = "IDLE"
-
-        if stable_posture == "IDLE":
-            self.ready_for_next = True
-
-        if stable_posture in {"IDLE", "BLOCK", "DUCK"}:
-            self.last_stable_posture = stable_posture
 
         if stable_posture == "IDLE":
             self.ready_for_next = True

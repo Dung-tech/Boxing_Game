@@ -3,33 +3,12 @@ import logging
 import os
 import socket
 import sys
-import tempfile
 import time
 import traceback
 import ctypes
 import struct
-import shutil
-import urllib.request
-if getattr(sys, "frozen", False):
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.executable))
-else:
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
-def resolve_project_root():
-    if os.path.exists(os.path.join(SCRIPT_DIR, "assets")):
-        return SCRIPT_DIR
-
-    parent = os.path.dirname(SCRIPT_DIR)
-    if os.path.exists(os.path.join(parent, "assets")):
-        return parent
-
-    return SCRIPT_DIR
-
-
-PROJECT_ROOT = resolve_project_root()
-ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
-APP_NAME = "BoxingGame"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 if SCRIPT_DIR not in sys.path:
@@ -49,68 +28,6 @@ def _log_unhandled_exception(exc_type, exc_value, exc_traceback):
 
 
 sys.excepthook = _log_unhandled_exception
-
-def _configure_mediapipe_cache():
-    cache_root = os.path.join(tempfile.gettempdir(), APP_NAME, "mediapipe")
-    os.makedirs(cache_root, exist_ok=True)
-
-    import mediapipe as mp
-    from mediapipe.python.solutions import download_utils
-
-    original_download = download_utils.download_oss_model
-    gcs_prefix = getattr(download_utils, "_GCS_URL_PREFIX", "https://storage.googleapis.com/mediapipe-assets/")
-    mp_root_path = os.sep.join(os.path.abspath(download_utils.__file__).split(os.sep)[:-4])
-
-    def _download_to_cache(*args, **kwargs):
-        model_path = None
-        model_url = None
-
-        if args:
-            if len(args) == 1:
-                model_path = args[0]
-            else:
-                first, second = args[0], args[1]
-                if isinstance(first, str) and first.startswith("http"):
-                    model_url, model_path = first, second
-                else:
-                    model_path, model_url = first, second
-
-        if model_path is None:
-            model_path = kwargs.get("model_path")
-            model_url = kwargs.get("model_url", model_url)
-
-        if not model_path:
-            return original_download(*args, **kwargs)
-
-        packaged_path = os.path.join(mp_root_path, model_path.replace("/", os.sep))
-        if os.path.exists(packaged_path):
-            return None
-
-        model_name = os.path.basename(model_path)
-        cache_path = os.path.join(cache_root, model_name)
-        if not os.path.exists(cache_path):
-            if not model_url:
-                model_url = gcs_prefix + model_name
-            try:
-                with urllib.request.urlopen(model_url) as response, open(cache_path, "wb") as output:
-                    if hasattr(response, "code") and response.code not in (None, 200):
-                        raise ConnectionError(f"Cannot download {model_path} (HTTP {response.code})")
-                    output.write(response.read())
-            except Exception:
-                LOGGER.exception("Failed to download MediaPipe model: %s", model_path)
-                return None
-
-        try:
-            os.makedirs(os.path.dirname(packaged_path), exist_ok=True)
-            shutil.copy2(cache_path, packaged_path)
-        except OSError:
-            pass
-        return None
-
-    download_utils.download_oss_model = _download_to_cache
-
-
-_configure_mediapipe_cache()
 
 from hand_detector import HandDetector
 from gesture_recognizer import GestureRecognizer
@@ -411,13 +328,10 @@ def main():
     if preview_show_window:
         _setup_preview_window(window_title, cap)
 
-    read_failures = 0
-
     try:
         while True:
             success, frame = cap.read()
             if not success:
-                read_failures += 1
                 if is_gym_mode:
                     cap.release()
                     time.sleep(0.05)
@@ -427,7 +341,6 @@ def main():
                         break
                     continue
                 break
-            read_failures = 0
 
             frame = cv2.flip(frame, 1)
             h, w, _ = frame.shape
