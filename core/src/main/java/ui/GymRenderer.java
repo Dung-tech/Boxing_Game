@@ -32,6 +32,10 @@ public class GymRenderer {
             : (gymer.isConcentric() ? assets.getConcentric() : assets.getEccentric());
         float centerW = 400f;
         float centerH = 400f;
+        if (state.isGameOver()) {
+            centerW *= 1.5f;
+            centerH *= 1.5f;
+        }
         float centerX = (Constants.APP_WIDTH - centerW) / 2f;
         float centerY = (Constants.APP_HEIGHT - centerH) / 2f - 20f;
 
