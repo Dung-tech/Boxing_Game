@@ -19,6 +19,7 @@ else:
 
 
 def resolve_project_root():
+    # Resolve project root for both dev layout and bundled exe layout.
     # Installed layout: app root contains assets and AI_Controller.exe.
     if os.path.exists(os.path.join(SCRIPT_DIR, "assets")):
         return SCRIPT_DIR
@@ -36,99 +37,17 @@ ASSETS_DIR = os.path.join(PROJECT_ROOT, "assets")
 APP_NAME = "BoxingGame"
 
 
-def _get_windows_local_appdata():
-    if os.name != "nt":
-        return None
-
-    # Use Windows API first because LOCALAPPDATA env can be stale/broken on some machines.
-    try:
-        buffer = ctypes.create_unicode_buffer(260)
-        csidl_local_appdata = 28
-        result = ctypes.windll.shell32.SHGetFolderPathW(None, csidl_local_appdata, None, 0, buffer)
-        if result == 0 and buffer.value:
-            return buffer.value
-    except Exception:
-        pass
-
-    return None
-
-
-def _is_dir_usable(path):
-    if not path:
-        return False
-    try:
-        os.makedirs(path, exist_ok=True)
-        test_file = os.path.join(path, ".write_test.tmp")
-        with open(test_file, "w", encoding="utf-8") as fh:
-            fh.write("ok")
-        os.remove(test_file)
-        return True
-    except OSError:
-        return False
-
-
-def resolve_log_file_path():
-    windows_local_appdata = _get_windows_local_appdata()
-    env_local_appdata = os.environ.get("LOCALAPPDATA")
-    home_local_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Local")
-    temp_dir = tempfile.gettempdir()
-
-    base_candidates = [windows_local_appdata, env_local_appdata, home_local_appdata, temp_dir]
-    seen = set()
-
-    for base in base_candidates:
-        if not base:
-            continue
-        norm_base = os.path.normpath(base)
-        if norm_base in seen:
-            continue
-        seen.add(norm_base)
-
-        candidate_dir = os.path.join(norm_base, APP_NAME)
-        if _is_dir_usable(candidate_dir):
-            return os.path.join(candidate_dir, "ai_controller.log")
-
-    # Final fallback keeps process alive even in heavily restricted environments.
-    return os.path.join(tempfile.gettempdir(), "ai_controller.log")
-
-
-LOG_FILE_PATH = resolve_log_file_path()
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 
-def setup_logging():
-    file_handler = None
-    try:
-        file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a", encoding="utf-8")
-    except OSError:
-        # Last fallback keeps process alive even if file logging cannot be created.
-        file_handler = logging.StreamHandler()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[file_handler],
-        force=True,
-    )
-    logger = logging.getLogger("ai_controller")
-    logger.info("=" * 72)
-    logger.info("AI controller process started")
-    logger.info("argv=%s", sys.argv)
-    logger.info("frozen=%s", getattr(sys, "frozen", False))
-    logger.info("executable=%s", sys.executable)
-    logger.info("cwd=%s", os.getcwd())
-    logger.info("script_dir=%s", SCRIPT_DIR)
-    logger.info("project_root=%s", PROJECT_ROOT)
-    logger.info("assets_dir_exists=%s", os.path.exists(ASSETS_DIR))
-    logger.info("log_file=%s", LOG_FILE_PATH)
-    return logger
-
-
-LOGGER = setup_logging()
+LOGGER = logging.getLogger("ai_controller")
+LOGGER.addHandler(logging.NullHandler())
+LOGGER.propagate = False
 
 
 def _log_unhandled_exception(exc_type, exc_value, exc_traceback):
+    # Funnel unhandled errors into a single log path (no dialog popups).
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
@@ -138,7 +57,8 @@ def _log_unhandled_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = _log_unhandled_exception
 
 def _configure_mediapipe_cache():
-    cache_root = os.path.join(os.path.dirname(LOG_FILE_PATH), "mediapipe")
+    # Redirect MediaPipe model downloads into a persistent temp cache.
+    cache_root = os.path.join(tempfile.gettempdir(), APP_NAME, "mediapipe")
     os.makedirs(cache_root, exist_ok=True)
 
     import mediapipe as mp
@@ -149,6 +69,7 @@ def _configure_mediapipe_cache():
     mp_root_path = os.sep.join(os.path.abspath(download_utils.__file__).split(os.sep)[:-4])
 
     def _download_to_cache(*args, **kwargs):
+        # Normalize the different download_oss_model call signatures.
         model_path = None
         model_url = None
 
@@ -169,12 +90,14 @@ def _configure_mediapipe_cache():
         if not model_path:
             return original_download(*args, **kwargs)
 
+        # If the model is bundled with mediapipe, do nothing.
         packaged_path = os.path.join(mp_root_path, model_path.replace("/", os.sep))
         if os.path.exists(packaged_path):
             return None
 
         model_name = os.path.basename(model_path)
         cache_path = os.path.join(cache_root, model_name)
+        # Download once into temp cache for reuse across runs.
         if not os.path.exists(cache_path):
             if not model_url:
                 model_url = gcs_prefix + model_name
@@ -187,15 +110,15 @@ def _configure_mediapipe_cache():
                 LOGGER.exception("Failed to download MediaPipe model: %s", model_path)
                 return None
 
+        # Copy into mediapipe's expected path when writable.
         try:
             os.makedirs(os.path.dirname(packaged_path), exist_ok=True)
             shutil.copy2(cache_path, packaged_path)
         except OSError:
-            LOGGER.warning("MediaPipe model cached at %s; package path not writable.", cache_path)
+            pass
         return None
 
     download_utils.download_oss_model = _download_to_cache
-    LOGGER.info("MediaPipe cache directory: %s", cache_root)
 
 
 _configure_mediapipe_cache()
@@ -211,7 +134,6 @@ STATE_ACTIONS = {"IDLE", "BLOCK", "DUCK", "CONCENTRIC", "ECCENTRIC"}
 STATE_RESEND_INTERVAL = 0.08  # ~12.5 Hz
 NONE_TO_IDLE_TIMEOUT = 0.30
 GYM_SEND_INTERVAL = 0.12
-DEBUG_SEND = False
 PREVIEW_MIN_WIDTH = 200
 PREVIEW_MIN_HEIGHT = 150
 PREVIEW_DEFAULT_SCALE = 0.35
@@ -222,48 +144,37 @@ PREVIEW_STREAM_DEFAULT_WIDTH = 320
 PREVIEW_STREAM_DEFAULT_JPEG_QUALITY = 70
 
 
-def _log_cv2_diagnostics():
-    LOGGER.info("OpenCV version: %s", getattr(cv2, "__version__", "unknown"))
-    try:
-        build_info = cv2.getBuildInformation()
-        focus_terms = ["Video I/O", "DirectShow", "Media Foundation", "MSMF", "FFMPEG", "GStreamer"]
-        for line in build_info.splitlines():
-            stripped = line.strip()
-            if any(term in stripped for term in focus_terms):
-                LOGGER.info("cv2-build: %s", stripped)
-    except Exception:
-        LOGGER.exception("Could not read OpenCV build information")
-
-
 def _parse_env_float(env_key, default_value):
+    # Robust env parsing with safe fallback.
     value = os.environ.get(env_key)
     if value is None or value.strip() == "":
         return default_value
     try:
         return float(value)
     except ValueError:
-        LOGGER.warning("Invalid %s=%s; using %s", env_key, value, default_value)
         return default_value
 
 
 def _parse_env_int(env_key, default_value):
+    # Robust env parsing with safe fallback.
     value = os.environ.get(env_key)
     if value is None or value.strip() == "":
         return default_value
     try:
         return int(value)
     except ValueError:
-        LOGGER.warning("Invalid %s=%s; using %s", env_key, value, default_value)
         return default_value
 
 
 def _is_truthy(value):
+    # Standardize env boolean parsing.
     if value is None:
         return False
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _resolve_preview_show_window(preview_streaming):
+    # Hide local preview when stream is enabled unless user forces it.
     raw = os.environ.get("AI_PREVIEW_SHOW_WINDOW")
     if raw is None or raw.strip() == "":
         return not preview_streaming
@@ -271,8 +182,8 @@ def _resolve_preview_show_window(preview_streaming):
 
 
 def _get_screen_size():
+    # Windows-only preview window placement support.
     if os.name != "nt":
-        LOGGER.info("Preview corner is only supported on Windows.")
         return None
     try:
         user32 = ctypes.windll.user32
@@ -290,6 +201,7 @@ def _get_screen_size():
 
 
 def _normalize_preview_corner(raw_value):
+    # Normalize preview corner option into a known label.
     if raw_value is None:
         return None
     corner = raw_value.strip().lower()
@@ -300,26 +212,23 @@ def _normalize_preview_corner(raw_value):
     valid = {"top-left", "top-right", "bottom-left", "bottom-right"}
     if corner in valid:
         return corner
-    LOGGER.warning("Invalid AI_PREVIEW_CORNER=%s; expected %s", raw_value, ", ".join(sorted(valid)))
     return None
 
 
 def _setup_preview_window(window_title, cap):
+    # Create a small preview window pinned to a screen corner.
     corner = _normalize_preview_corner(os.environ.get("AI_PREVIEW_CORNER"))
     if not corner:
         return False
 
     screen_size = _get_screen_size()
     if not screen_size:
-        LOGGER.info("Preview corner requested but screen size unavailable.")
         return False
 
     scale = _parse_env_float("AI_PREVIEW_SCALE", PREVIEW_DEFAULT_SCALE)
     if scale <= 0:
-        LOGGER.warning("AI_PREVIEW_SCALE must be > 0; using %s", PREVIEW_DEFAULT_SCALE)
         scale = PREVIEW_DEFAULT_SCALE
     if scale > 1:
-        LOGGER.warning("AI_PREVIEW_SCALE too large; clamping to 1.0")
         scale = 1.0
 
     base_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
@@ -329,7 +238,6 @@ def _setup_preview_window(window_title, cap):
 
     margin = _parse_env_int("AI_PREVIEW_MARGIN", PREVIEW_DEFAULT_MARGIN)
     if margin < 0:
-        LOGGER.warning("AI_PREVIEW_MARGIN must be >= 0; using %s", PREVIEW_DEFAULT_MARGIN)
         margin = PREVIEW_DEFAULT_MARGIN
 
     screen_width, screen_height = screen_size
@@ -353,18 +261,11 @@ def _setup_preview_window(window_title, cap):
         except Exception:
             LOGGER.exception("Could not set preview window as topmost")
 
-    LOGGER.info(
-        "Preview window anchored at %s size=%sx%s pos=%s,%s",
-        corner,
-        preview_width,
-        preview_height,
-        x,
-        y,
-    )
     return True
 
 
 def _open_camera_with_fallback(camera_index=0):
+    # Try multiple camera backends for more reliable Windows capture.
     candidates = [("DEFAULT", None)]
     if hasattr(cv2, "CAP_DSHOW"):
         candidates.append(("DSHOW", cv2.CAP_DSHOW))
@@ -388,14 +289,6 @@ def _open_camera_with_fallback(camera_index=0):
             if opened and hasattr(cv2, "CAP_PROP_BACKEND"):
                 backend_id = cap.get(cv2.CAP_PROP_BACKEND)
 
-            LOGGER.info(
-                "Camera open attempt: index=%s backend=%s opened=%s backend_id=%s",
-                camera_index,
-                backend_name,
-                opened,
-                backend_id,
-            )
-
             if opened:
                 return cap
         except Exception:
@@ -405,9 +298,11 @@ def _open_camera_with_fallback(camera_index=0):
 
 
 def send_action(conn, player_tag, action, cache):
+    # Send player action with throttle for posture states.
     now = time.monotonic()
-    last_action = cache[player_tag]["action"]
-    last_time = cache[player_tag]["time"]
+    cache_entry = cache[player_tag]
+    last_action = cache_entry["action"]
+    last_time = cache_entry["time"]
 
     # Burst gestures must always pass through; posture states are sent only on change/throttled.
     if action in STATE_ACTIONS and action == last_action and (now - last_time) < STATE_RESEND_INTERVAL:
@@ -422,19 +317,18 @@ def send_action(conn, player_tag, action, cache):
     except (BrokenPipeError, ConnectionResetError, OSError):
         return False
 
-    cache[player_tag]["action"] = action
-    cache[player_tag]["time"] = now
-
-    if DEBUG_SEND:
-        print(f"SENDING: {msg.strip()}")
+    cache_entry["action"] = action
+    cache_entry["time"] = now
 
     return True
 
 
 def send_gym_action(conn, action, cache):
+    # Send gym action with its own throttle window.
     now = time.monotonic()
-    last_action = cache["GYM"]["action"]
-    last_time = cache["GYM"]["time"]
+    cache_entry = cache["GYM"]
+    last_action = cache_entry["action"]
+    last_time = cache_entry["time"]
 
     if action == last_action and (now - last_time) < GYM_SEND_INTERVAL:
         return True
@@ -447,20 +341,19 @@ def send_gym_action(conn, action, cache):
     except (BrokenPipeError, ConnectionResetError, OSError):
         return False
 
-    cache["GYM"]["action"] = action
-    cache["GYM"]["time"] = now
+    cache_entry["action"] = action
+    cache_entry["time"] = now
     return True
 
 def main():
+    # Determine runtime mode from args (hand, pose, or gym pose).
     mode = "CAMERA_AI"
     if len(sys.argv) > 1:
         mode = sys.argv[1].strip().upper()
 
-    gym_mode = mode == "CAMERA_GYM_POSE"
-    server_port = 65433 if gym_mode else 65432
-
-    LOGGER.info("Selected mode=%s, server_port=%s", mode, server_port)
-    _log_cv2_diagnostics()
+    is_gym_mode = mode == "CAMERA_GYM_POSE"
+    is_pose_mode = mode == "CAMERA_POSE"
+    server_port = 65433 if is_gym_mode else 65432
 
     # 1. --- SETUP SOCKET ---
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -469,13 +362,10 @@ def main():
     server_socket.bind(('127.0.0.1', server_port))
     server_socket.listen(1)
 
-    print("Python: [WAITING] Dang doi Java ket noi...")
-    LOGGER.info("Waiting for Java connection on 127.0.0.1:%s", server_port)
     conn, addr = server_socket.accept()
     conn.settimeout(0.03)
-    print(f"Python: [CONNECTED] Da ket noi voi Java tai {addr}")
-    LOGGER.info("Connected to Java peer at %s", addr)
 
+    # Optional preview stream is used by the Java overlay.
     preview_streaming = _is_truthy(os.environ.get("AI_PREVIEW_STREAM"))
     preview_show_window = _resolve_preview_show_window(preview_streaming)
     preview_server = None
@@ -488,21 +378,19 @@ def main():
     last_preview_time = 0.0
 
     if preview_streaming:
+        # Configure preview stream socket + encoding parameters.
         preview_port = _parse_env_int("AI_PREVIEW_PORT", PREVIEW_STREAM_DEFAULT_PORT)
         preview_fps = _parse_env_float("AI_PREVIEW_FPS", PREVIEW_STREAM_DEFAULT_FPS)
         if preview_fps <= 0:
-            LOGGER.warning("AI_PREVIEW_FPS must be > 0; using %s", PREVIEW_STREAM_DEFAULT_FPS)
             preview_fps = PREVIEW_STREAM_DEFAULT_FPS
         preview_interval = 1.0 / preview_fps
 
         preview_width = _parse_env_int("AI_PREVIEW_WIDTH", PREVIEW_STREAM_DEFAULT_WIDTH)
         if preview_width <= 0:
-            LOGGER.warning("AI_PREVIEW_WIDTH must be > 0; using %s", PREVIEW_STREAM_DEFAULT_WIDTH)
             preview_width = PREVIEW_STREAM_DEFAULT_WIDTH
 
         preview_quality = _parse_env_int("AI_PREVIEW_JPEG_QUALITY", PREVIEW_STREAM_DEFAULT_JPEG_QUALITY)
         if preview_quality < 30 or preview_quality > 95:
-            LOGGER.warning("AI_PREVIEW_JPEG_QUALITY must be 30-95; using %s", PREVIEW_STREAM_DEFAULT_JPEG_QUALITY)
             preview_quality = PREVIEW_STREAM_DEFAULT_JPEG_QUALITY
 
         try:
@@ -511,7 +399,6 @@ def main():
             preview_server.bind(('127.0.0.1', preview_port))
             preview_server.listen(1)
             preview_server.settimeout(0.2)
-            LOGGER.info("Preview stream enabled on 127.0.0.1:%s", preview_port)
         except OSError:
             LOGGER.exception("Could not start preview stream on port %s", preview_port)
             preview_streaming = False
@@ -520,6 +407,7 @@ def main():
                 preview_show_window = True
 
     # 2. --- KHOI TAO CAMERA & AI ---
+    # Initialize camera before booting detectors.
     cap = _open_camera_with_fallback(0)
     if cap is None or not cap.isOpened():
         LOGGER.error("Camera failed to open with all backends. Exiting early.")
@@ -531,11 +419,12 @@ def main():
     recognizer_p1 = None
     recognizer_p2 = None
 
-    if mode == "CAMERA_POSE":
+    # Choose detector + recognizer per mode.
+    if is_pose_mode:
         detector = PoseDetector()
         recognizer_p1 = PoseGestureRecognizer()
         recognizer_p2 = PoseGestureRecognizer()
-    elif mode == "CAMERA_GYM_POSE":
+    elif is_gym_mode:
         detector = GymPoseDetector()
         recognizer_p1 = GymPoseRecognizer()
         recognizer_p2 = None
@@ -544,13 +433,15 @@ def main():
         # Tao 2 thuc the rieng biet de khong bi lan lon lich su ngon tay cua 2 nguoi
         recognizer_p1 = GestureRecognizer()
         recognizer_p2 = GestureRecognizer()
+    # Keep last sent action per channel to reduce spam.
     send_cache = {
         "P1": {"action": None, "time": 0.0},
         "P2": {"action": None, "time": 0.0},
         "GYM": {"action": None, "time": 0.0},
     }
+    # If no gesture for a while, force IDLE to sync state machine.
     last_non_none_time = {"P1": time.monotonic(), "P2": time.monotonic()}
-    window_title = "Gym Pose Controller" if mode == "CAMERA_GYM_POSE" else "Boxing AI - 2 Players Mode"
+    window_title = "Gym Pose Controller" if is_gym_mode else "Boxing AI - 2 Players Mode"
     if preview_show_window:
         _setup_preview_window(window_title, cap)
 
@@ -561,8 +452,7 @@ def main():
             success, frame = cap.read()
             if not success:
                 read_failures += 1
-                LOGGER.warning("Camera read failed (count=%s, mode=%s)", read_failures, mode)
-                if mode == "CAMERA_GYM_POSE":
+                if is_gym_mode:
                     # Gym mode self-heals transient camera glitches instead of exiting.
                     cap.release()
                     time.sleep(0.05)
@@ -579,11 +469,13 @@ def main():
             h, w, _ = frame.shape
 
             # 3. --- NHAN DIEN ---
-            if mode == "CAMERA_POSE":
+            if is_pose_mode:
+                # Pose mode: each half of the camera is a player.
                 pose_results = detector.detect(frame)
                 gesture_p1 = recognizer_p1.recognize(pose_results["P1"])
                 gesture_p2 = recognizer_p2.recognize(pose_results["P2"])
-            elif mode == "CAMERA_GYM_POSE":
+            elif is_gym_mode:
+                # Gym mode: single player with push-up style detection.
                 try:
                     gym_landmarks = detector.detect(frame)
                     gesture_p1 = recognizer_p1.recognize(gym_landmarks)
@@ -592,13 +484,14 @@ def main():
                     gesture_p1 = "NONE"
                 gesture_p2 = "NONE"
             else:
+                # Hand mode: count fingers per side.
                 # results se la dict: {"P1": count, "P2": count}
                 results = detector.count_fingers(frame)
                 gesture_p1 = recognizer_p1.recognize(results["P1"])
                 gesture_p2 = recognizer_p2.recognize(results["P2"])
 
             now = time.monotonic()
-            if mode != "CAMERA_GYM_POSE":
+            if not is_gym_mode:
                 if gesture_p1 != "NONE":
                     last_non_none_time["P1"] = now
                 elif now - last_non_none_time["P1"] > NONE_TO_IDLE_TIMEOUT:
@@ -610,28 +503,28 @@ def main():
                     gesture_p2 = "IDLE"
 
             # --- XU LY PLAYER 1 (Ben trai) ---
-            if mode == "CAMERA_GYM_POSE":
+            if is_gym_mode:
+                # Gym mode sends on the special GYM channel.
                 gym_action = gesture_p1 if gesture_p1 != "NONE" else "NONE"
                 if not send_gym_action(conn, gym_action, send_cache):
-                    print("Python: [INFO] Gym receiver da ngat, dong camera gym...")
                     break
             elif gesture_p1 != "NONE":
-                if mode != "CAMERA_GYM_POSE":
-                    if not send_action(conn, "P1", gesture_p1, send_cache):
-                        break
+                if not send_action(conn, "P1", gesture_p1, send_cache):
+                    break
             if gesture_p1 != "NONE":
                 cv2.putText(frame, f"P1: {gesture_p1}", (50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
             # --- XU LY PLAYER 2 (Ben phai) ---
-            if mode != "CAMERA_GYM_POSE" and gesture_p2 != "NONE":
+            if not is_gym_mode and gesture_p2 != "NONE":
+                # P2 is disabled in gym mode.
                 if not send_action(conn, "P2", gesture_p2, send_cache):
                     break
                 cv2.putText(frame, f"P2: {gesture_p2}", (w//2 + 50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
             # 4. --- HIEN THI GUI ---
-            if mode != "CAMERA_GYM_POSE":
+            if not is_gym_mode:
                 # Ve vach ke chia doi man hinh
                 cv2.line(frame, (w//2, 0), (w//2, h), (255, 255, 0), 2)
                 cv2.putText(frame, "P1 AREA", (w//4 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
@@ -639,11 +532,11 @@ def main():
 
             cv2.putText(frame, f"MODE: {mode}", (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
             if preview_streaming and preview_server is not None:
+                # Stream preview frames to the local overlay client.
                 if preview_conn is None:
                     try:
                         preview_conn, _ = preview_server.accept()
                         preview_conn.settimeout(0.05)
-                        LOGGER.info("Preview client connected")
                     except socket.timeout:
                         preview_conn = None
 
@@ -678,15 +571,11 @@ def main():
             if preview_show_window:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-    except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
-        print(f"Loi ket noi socket: {e}")
+    except (socket.timeout, BrokenPipeError, ConnectionResetError):
         LOGGER.exception("Socket connection error")
-    except Exception as e:
-        print(f"Loi: {e}")
+    except Exception:
         LOGGER.exception("Fatal runtime error")
     finally:
-        print("Python: Dang dong ket noi...")
-        LOGGER.info("Shutting down controller")
         conn.close()
         server_socket.close()
         if preview_conn is not None:

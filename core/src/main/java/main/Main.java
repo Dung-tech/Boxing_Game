@@ -8,6 +8,7 @@ import screen.MenuGame;
 import sound.SoundManager;
 import util.CameraRuntimeManager;
 
+// LibGDX entry point that wires up batch and sound.
 public class Main extends Game {
     public SpriteBatch batch;
     public Texture image;

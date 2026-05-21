@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Align;
 import util.Constants;
 
+// In-game manual overlay with tabs for controls and modes.
 public class Manual {
 	private final String[] tabs = {"BÀN PHÍM", "CAMERA AI", "CAMERA POSE", "GYM"};
 	private int selectedTab = 0;

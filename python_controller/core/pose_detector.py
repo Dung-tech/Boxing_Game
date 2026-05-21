@@ -8,6 +8,7 @@ mp_drawing = mp.solutions.drawing_utils
 
 
 class PoseDetector:
+    # Split screen into two halves and run pose detection per player.
     def __init__(self):
         model_complexity = select_pose_model_complexity(default=0)
         # Separate models per side to keep tracking stable for each player half.
@@ -28,6 +29,7 @@ class PoseDetector:
 
 
     def detect(self, frame):
+        # Process each half independently to avoid landmark swaps.
         h, w, _ = frame.shape
         mid = w // 2
 
@@ -42,22 +44,14 @@ class PoseDetector:
         p1_result = self.pose_p1.process(p1_rgb)
         p2_result = self.pose_p2.process(p2_rgb)
 
+        # Draw overlays directly on the ROIs.
         if p1_result.pose_landmarks:
             mp_drawing.draw_landmarks(p1_roi, p1_result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         if p2_result.pose_landmarks:
             mp_drawing.draw_landmarks(p2_roi, p2_result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
+        # Return raw landmarks for the recognizers.
         return {
             "P1": p1_result.pose_landmarks,
             "P2": p2_result.pose_landmarks,
         }
-
-    def detect_single(self, frame):
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
-
-        result = self.pose_single.process(rgb)
-        if result.pose_landmarks:
-            mp_drawing.draw_landmarks(frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-        return {"GYM": result.pose_landmarks}

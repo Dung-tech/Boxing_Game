@@ -4,6 +4,7 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 
+// Centralized asset loader for sounds and music.
 public class AssetManagerWrapper {
     private AssetManager manager = new AssetManager();
 
@@ -13,6 +14,7 @@ public class AssetManagerWrapper {
         manager.load("sounds/hit.mp3", Sound.class);
         manager.load("sounds/kick.mp3", Sound.class);
         manager.load("sounds/glass_break.mp3", Sound.class);
+        manager.load("sounds/countDownGym.mp3", Sound.class);
         manager.load("sounds/CountDownSound.mp3", Sound.class);
         manager.load("sounds/siuu.mp3", Sound.class);
         manager.load("sounds/ankara_messi.mp3", Sound.class);

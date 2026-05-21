@@ -4,6 +4,7 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import util.AssetManagerWrapper;
 
+// Manages music and sound effect playback with volume control.
 public class SoundManager {
     private static final float MENU_MUSIC_BASE_VOLUME = 0.5f;
     private static final float FIGHT_MUSIC_BASE_VOLUME = 0.25f;
@@ -16,7 +17,7 @@ public class SoundManager {
         END
     }
 
-    private Sound punch, kick, hit, glassBreak, countDown, siuu, ankaraMessi;
+    private Sound punch, kick, hit, glassBreak, countDown, countDownGym;
     private Music bgMusic, menuMusic, endMusic;
     private AssetManagerWrapper wrapper;
     private MusicState currentMusicState = MusicState.NONE;
@@ -35,8 +36,7 @@ public class SoundManager {
         this.hit = wrapper.getAsset("sounds/hit.mp3", Sound.class);
         this.glassBreak = wrapper.getAsset("sounds/glass_break.mp3", Sound.class);
         this.countDown = wrapper.getAsset("sounds/CountDownSound.mp3", Sound.class);
-        this.siuu = wrapper.getAsset("sounds/siuu.mp3", Sound.class);
-        this.ankaraMessi = wrapper.getAsset("sounds/ankara_messi.mp3", Sound.class);
+        this.countDownGym = wrapper.getAsset("sounds/countDownGym.mp3", Sound.class);
         this.bgMusic = wrapper.getAsset("sounds/bg_music.mp3", Music.class);
         this.menuMusic = wrapper.getAsset("sounds/menu_music.mp3", Music.class);
         this.endMusic = wrapper.getAsset("sounds/end_music.mp3", Music.class);
@@ -74,10 +74,7 @@ public class SoundManager {
     public void playHit() { if (hit != null) hit.play(sfxVolume); }
     public void playGlassBreak() { if (glassBreak != null) glassBreak.play(sfxVolume); }
     public void playCountDown() { if (countDown != null) countDown.play(sfxVolume); }
-    public void playSiuu() { if (siuu != null) siuu.play(sfxVolume); }
-    public void playAnkaraMessi() { if (ankaraMessi != null) ankaraMessi.play(sfxVolume); }
-    public void stopSiuu() { if (siuu != null) siuu.stop(); }
-    public void stopAnkaraMessi() { if (ankaraMessi != null) ankaraMessi.stop(); }
+    public void playCountDownGym() { if (countDownGym != null) countDownGym.play(sfxVolume); }
 
     public void stopBackgroundMusic() {
         if (bgMusic != null) {

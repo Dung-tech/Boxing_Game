@@ -6,6 +6,7 @@ import screen.GameOverScreen;
 import util.Constants;
 import main.Main;
 
+// Tracks overall game state transitions (playing -> game over).
 public class GameStateManager {
     private final Game game;
     private String controlMode;

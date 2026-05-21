@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+// Draws a health bar with numeric label.
 public class HealthBar {
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;

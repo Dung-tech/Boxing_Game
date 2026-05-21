@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import util.Constants;
 
+// Draws a mana bar with numeric label.
 public class ManaBar {
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;

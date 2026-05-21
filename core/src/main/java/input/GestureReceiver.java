@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+// Receives P1/P2 actions from the Python controller over TCP.
 public class GestureReceiver implements InputController, Runnable {
     private static GestureReceiver instance;
 

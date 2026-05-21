@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+// Receives gym pose actions from the Python controller over TCP.
 public class GymGestureReceiver implements Runnable {
     private static GymGestureReceiver instance;
 

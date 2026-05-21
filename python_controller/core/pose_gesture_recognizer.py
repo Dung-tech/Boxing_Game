@@ -8,7 +8,6 @@ POSTURE_HISTORY_SIZE = 4
 POSTURE_STABILITY_MIN = 2  # 2/4 for posture stabilization
 
 VISIBILITY_MIN = 0.30
-LOSS_HOLD_SECONDS = 0.22
 BURST_COOLDOWN = 0.22
 BURST_DEADBAND_SECONDS = 0.08
 
@@ -38,16 +37,16 @@ KICK_ELBOW_UP_FACTOR = 0.02
 
 
 class PoseGestureRecognizer:
+    # Recognize posture (idle/block/duck) plus burst actions (punch/kick/skill).
     def __init__(self):
         self.posture_history = deque(maxlen=POSTURE_HISTORY_SIZE)
         self.ready_for_next = True
         self.last_burst_time = 0.0
         self.burst_cooldown = BURST_COOLDOWN
         self.last_stable_posture = "IDLE"
-        self.last_seen_time = time.monotonic()
-        self.loss_hold_seconds = LOSS_HOLD_SECONDS
         self.deadband_until = 0.0
 
+        # Baselines are learned when the player stands idle.
         self.base_hip_y = None
         self.base_nose_y = None
         self.base_left_wrist_z = None
@@ -62,6 +61,7 @@ class PoseGestureRecognizer:
         # ...existing code...
 
     def _lm(self, lms, idx):
+        # Read landmark tuple once to keep math cleaner.
         lm = lms.landmark[idx]
         return lm.x, lm.y, lm.z, lm.visibility
 
@@ -69,6 +69,7 @@ class PoseGestureRecognizer:
         return math.hypot(a[0] - b[0], a[1] - b[1])
 
     def recognize(self, pose_landmarks):
+        # Core pose-to-action pipeline with stabilization and cooldowns.
         now = time.monotonic()
         if pose_landmarks is None:
             self.posture_history.clear()
@@ -98,14 +99,14 @@ class PoseGestureRecognizer:
         rh = self._lm(lms, RIGHT_HIP)
         # ...existing code...
 
+        # Visibility gating to avoid noisy actions when landmarks fade.
         critical_vis = [ls[3], rs[3], lw[3], rw[3], lh[3], rh[3]]
         if min(critical_vis) < VISIBILITY_MIN:
             # Low visibility is treated as a successful hide/duck.
             self.last_stable_posture = "DUCK"
             return "DUCK"
 
-        self.last_seen_time = now
-
+        # Normalize thresholds by body proportions.
         shoulder_width = max(1e-4, self._dist(ls, rs))
         mid_shoulder_y = (ls[1] + rs[1]) * 0.5
         mid_hip_y = (lh[1] + rh[1]) * 0.5
@@ -151,6 +152,7 @@ class PoseGestureRecognizer:
         elif is_idle:
             posture = "IDLE"
 
+        # Stabilize posture with small history window.
         self.posture_history.append(posture)
         stable_posture = "NONE"
         if len(self.posture_history) == self.posture_history.maxlen:
@@ -224,6 +226,7 @@ class PoseGestureRecognizer:
         # ...existing code...
 
         if can_burst:
+            # Burst gestures fire once, then require IDLE to re-arm.
             # User mapping: SKILL = punch with both hands simultaneously.
             if is_double_punch:
                 self.ready_for_next = False
@@ -246,4 +249,3 @@ class PoseGestureRecognizer:
 
         # Any non-matching posture falls back to default IDLE state.
         return "IDLE"
-

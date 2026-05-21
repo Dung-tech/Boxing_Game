@@ -2,6 +2,7 @@ package util;
 
 import com.badlogic.gdx.Input;
 
+// Game-wide constants and enums.
 public final class Constants {
 
     private Constants() {}

@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import entity.Gymer;
 import input.GymGestureReceiver;
 
+// Controls gym training state from camera gestures and keyboard fallback.
 public class GymerController {
 	private final Gymer gymer;
 
