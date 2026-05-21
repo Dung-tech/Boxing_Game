@@ -7,7 +7,7 @@ import util.AssetManagerWrapper;
 // Manages music and sound effect playback with volume control.
 public class SoundManager {
     private static final float MENU_MUSIC_BASE_VOLUME = 0.5f;
-    private static final float FIGHT_MUSIC_BASE_VOLUME = 1.0f;
+    private static final float FIGHT_MUSIC_BASE_VOLUME = 0.25f;
     private static final float END_MUSIC_BASE_VOLUME = 0.7f;
 
     public enum MusicState {

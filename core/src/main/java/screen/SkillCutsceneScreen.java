@@ -76,6 +76,13 @@ public class SkillCutsceneScreen extends ScreenAdapter {
         Gdx.input.setInputProcessor(inputBlocker);
         discoverFrames();
         framesLoaded = !framePaths.isEmpty();
+        if (game.soundManager != null) {
+            if ("P1".equals(playerSide)) {
+                game.soundManager.playSiuu();
+            } else if ("P2".equals(playerSide)) {
+                game.soundManager.playAnkaraMessi();
+            }
+        }
     }
 
     private void discoverFrames() {
@@ -85,12 +92,24 @@ public class SkillCutsceneScreen extends ScreenAdapter {
 
         framePaths.clear();
         FileHandle dir = Gdx.files.internal(folder);
+        if (!hasPngFrames(dir)) {
+            System.out.println("[SkillCutscene] Không tìm thấy PNG trong classpath folder mặc định, thử tìm tại assets/...");
+            dir = Gdx.files.internal("assets/" + folder);
+        }
+        if (!hasPngFrames(dir)) {
+            System.out.println("[SkillCutscene] Thử tìm tại ../assets/...");
+            dir = Gdx.files.internal("../assets/" + folder);
+        }
+
         if (dir.exists() && dir.isDirectory()) {
             ArrayList<String> collected = new ArrayList<>();
-            for (FileHandle file : dir.list()) {
-                String name = file.name();
-                if (name.startsWith("frame_") && name.endsWith(".png")) {
-                    collected.add(folder + "/" + name);
+            FileHandle[] files = dir.list();
+            if (files != null) {
+                for (FileHandle file : files) {
+                    String name = file.name();
+                    if (name.startsWith("frame_") && name.endsWith(".png")) {
+                        collected.add(file.path());
+                    }
                 }
             }
             Collections.sort(collected);
@@ -108,7 +127,23 @@ public class SkillCutsceneScreen extends ScreenAdapter {
             nextFrameToLoad = 1;
         }
 
-        System.out.println("[SkillCutscene] Đã load xong " + framePaths.size + " frame cho " + playerSide);
+        System.out.println("[SkillCutscene] Đã tìm thấy " + framePaths.size + " frame cho " + playerSide);
+    }
+
+    private boolean hasPngFrames(FileHandle dir) {
+        if (!dir.exists() || !dir.isDirectory()) return false;
+        try {
+            FileHandle[] list = dir.list();
+            if (list == null) return false;
+            for (FileHandle f : list) {
+                if (f.name().startsWith("frame_") && f.name().endsWith(".png")) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // Bỏ qua lỗi listing
+        }
+        return false;
     }
 
     private void loadFrame(int index) {
@@ -135,7 +170,8 @@ public class SkillCutsceneScreen extends ScreenAdapter {
         }
 
         if (!framesLoaded || framePaths.isEmpty()) {
-            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+            System.out.println("[SkillCutscene] Không tìm thấy khung hình cắt cảnh. Tự động quay lại game.");
+            returnToGame();
             return;
         }
 
@@ -192,6 +228,7 @@ public class SkillCutsceneScreen extends ScreenAdapter {
     private void returnToGame() {
         if (finished) return;
         finished = true;
+        stopCutsceneSounds();
         restoreInputProcessor();
         game.setScreen(returnScreen);
         dispose();
@@ -200,9 +237,17 @@ public class SkillCutsceneScreen extends ScreenAdapter {
     private void returnToMenu() {
         if (finished) return;
         finished = true;
+        stopCutsceneSounds();
         restoreInputProcessor();
         game.setScreen(new MenuGame(game));
         dispose();
+    }
+
+    private void stopCutsceneSounds() {
+        if (game.soundManager != null) {
+            game.soundManager.stopSiuu();
+            game.soundManager.stopAnkaraMessi();
+        }
     }
 
     @Override
