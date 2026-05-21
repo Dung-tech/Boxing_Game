@@ -20,6 +20,7 @@ import util.Constants;
 public class MenuGame extends ScreenAdapter {
     private final Main game;
     private Texture background;
+    private Texture titleLogo;
     private BitmapFont font;
     private GlyphLayout layout;
     private ShapeRenderer shapeRenderer;
@@ -42,6 +43,7 @@ public class MenuGame extends ScreenAdapter {
     public MenuGame(Main game) {
         this.game = game;
         background = new Texture("images/background/background2.png");
+        titleLogo = new Texture("logo/Boxing_game.png");
         font = createReadableFont();
         font.getData().setScale(2f);
         layout = new GlyphLayout();
@@ -242,12 +244,14 @@ public class MenuGame extends ScreenAdapter {
         shapeRenderer.setColor(0, 0, 0, 0.5f);
         shapeRenderer.rect(0, 0, Constants.APP_WIDTH, Constants.APP_HEIGHT);
 
-        float menuX = Constants.APP_WIDTH / 2f - 160;
-        float menuY = 200;
+        float menuW = 320f;
+        float menuH = 390f;
+        float menuX = Constants.APP_WIDTH / 2f - menuW / 2f;
+        float menuY = 140f;
 
         // Khung Menu chính
         shapeRenderer.setColor(new Color(30/255f, 30/255f, 40/255f, 1f));
-        shapeRenderer.rect(menuX, menuY, 320, 390);
+        shapeRenderer.rect(menuX, menuY, menuW, menuH);
 
         // Highlight mục được chọn
         shapeRenderer.setColor(new Color(180/255f, 30/255f, 30/255f, 1f));
@@ -257,8 +261,17 @@ public class MenuGame extends ScreenAdapter {
         shapeRenderer.end();
 
         game.batch.begin();
-        font.getData().setScale(4f);
-        drawCenter(game.batch, "BOXING GAME", Constants.APP_WIDTH, 650, Color.GOLD);
+        float maxTitleWidth = 700f;
+        float maxTitleHeight = 160f;
+        float titleScale = Math.min(
+            maxTitleWidth / titleLogo.getWidth(),
+            maxTitleHeight / titleLogo.getHeight()
+        ) * 2f;
+        float titleW = titleLogo.getWidth() * titleScale;
+        float titleH = titleLogo.getHeight() * titleScale;
+        float titleX = (Constants.APP_WIDTH - titleW) / 2f;
+        float titleY = Constants.APP_HEIGHT - titleH + 6f;
+        game.batch.draw(titleLogo, titleX, titleY, titleW, titleH);
 
         font.getData().setScale(2f);
         for (int i = 0; i < menuItems.length; i++) {
@@ -318,6 +331,7 @@ public class MenuGame extends ScreenAdapter {
     @Override
     public void dispose() {
         background.dispose();
+        titleLogo.dispose();
         font.dispose();
         shapeRenderer.dispose();
     }

@@ -1,0 +1,161 @@
+@startuml
+title Boxing_Game - Core Class Diagram
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+package "main" {
+  class Main {
+    +SpriteBatch batch
+    +SoundManager soundManager
+    +create()
+    +render()
+    +dispose()
+  }
+}
+
+package "screen" {
+  class ScreenAdapter <<LibGDX>>
+  class MenuGame
+  class GameScreen
+  class GymScreen
+  class GameOverScreen
+  class SkillCutsceneScreen
+
+  ScreenAdapter <|-- MenuGame
+  ScreenAdapter <|-- GameScreen
+  ScreenAdapter <|-- GymScreen
+  ScreenAdapter <|-- GameOverScreen
+  ScreenAdapter <|-- SkillCutsceneScreen
+}
+
+package "system" {
+  class CombatSystem
+  class RoundSystem
+  class GameStateManager
+  class GymSession
+  class GymState
+}
+
+package "entity" {
+  class Fighter
+  class Gymer
+  class FighterStats
+}
+
+package "controller" {
+  abstract class FighterController
+  class P1Controller
+  class P2Controller
+  class GymerController
+
+  FighterController <|-- P1Controller
+  FighterController <|-- P2Controller
+}
+
+package "input" {
+  interface InputController
+  class KeyboardInput
+  class GestureReceiver
+  class GymGestureReceiver
+  class GymInputHandler
+  class CameraPreviewReceiver
+
+  InputController <|.. KeyboardInput
+  InputController <|.. GestureReceiver
+}
+
+package "ui" {
+  class GameHUD
+  class HealthBar
+  class ManaBar
+  class GymAssets
+  class GymRenderer
+  class CameraPreviewOverlay
+  class Manual
+}
+
+package "effect" {
+  class EffectManager
+}
+
+package "sound" {
+  class SoundManager
+}
+
+package "util" {
+  class Constants
+  class AssetManagerWrapper
+  class AIControllerLauncher
+  class CameraRuntimeManager
+}
+
+Main --> MenuGame : setScreen()
+Main --> SoundManager : owns
+Main --> CameraRuntimeManager : shutdownAll()
+
+MenuGame --> Manual
+MenuGame --> AIControllerLauncher
+MenuGame --> CameraRuntimeManager
+
+GameScreen --> Fighter : p1/p2
+GameScreen --> CombatSystem
+GameScreen --> RoundSystem
+GameScreen --> GameStateManager
+GameScreen --> EffectManager
+GameScreen --> GameHUD
+GameScreen --> P1Controller
+GameScreen --> P2Controller
+GameScreen --> CameraPreviewOverlay
+GameScreen --> SoundManager
+
+GameStateManager --> GameOverScreen
+GameStateManager --> RoundSystem
+
+GameOverScreen --> Fighter
+GameOverScreen --> RoundSystem
+GameOverScreen --> GameScreen
+GameOverScreen --> MenuGame
+GameOverScreen --> SoundManager
+
+GymScreen --> GymAssets
+GymScreen --> GymRenderer
+GymScreen --> GymSession
+GymScreen --> CameraPreviewOverlay
+GymScreen --> GymGestureReceiver
+GymScreen --> AIControllerLauncher
+
+GymSession --> Gymer
+GymSession --> GymerController
+GymSession --> GymState
+GymSession --> GymInputHandler
+
+GymerController --> Gymer
+GymerController --> GymGestureReceiver
+
+GymRenderer --> GymAssets
+GymRenderer --> GymState
+GymRenderer --> Gymer
+GymRenderer --> CameraPreviewOverlay
+
+GameHUD --> HealthBar
+GameHUD --> ManaBar
+GameHUD --> RoundSystem
+GameHUD --> Fighter
+
+CombatSystem --> Fighter
+CombatSystem --> EffectManager
+CombatSystem --> SoundManager
+
+Fighter --> FighterStats
+Fighter --> GestureReceiver
+Fighter --> Constants
+
+FighterController --> Fighter
+FighterController --> InputController
+
+CameraPreviewOverlay --> CameraPreviewReceiver
+
+SoundManager --> AssetManagerWrapper
+
+GymInputHandler --> GymState
+@enduml
