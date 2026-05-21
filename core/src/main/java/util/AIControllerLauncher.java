@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+// Starts the Python AI controller (script or bundled exe).
 public class AIControllerLauncher {
     private AIControllerLauncher() {
     }

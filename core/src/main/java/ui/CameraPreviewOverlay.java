@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import input.CameraPreviewReceiver;
 
+// Draws the live camera preview overlay in-game.
 public class CameraPreviewOverlay {
     private static final float PREVIEW_MARGIN = 16f;
     private static final float PREVIEW_MAX_WIDTH = 320f;

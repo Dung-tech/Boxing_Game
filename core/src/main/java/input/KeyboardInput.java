@@ -3,6 +3,7 @@ package input;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 
+// Keyboard-based input mapping for a single fighter.
 public class KeyboardInput implements InputController {
     private int kP, kK, kD, kB, kS;
     private boolean isP, isK, isD, isB, isS;

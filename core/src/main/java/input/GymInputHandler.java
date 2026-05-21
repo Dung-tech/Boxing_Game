@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import system.GymState;
 
+// Handles gym menu/global input in gym mode.
 public class GymInputHandler {
     public enum Action {
         NONE,

@@ -1,5 +1,6 @@
 package entity;
 
+// Gym trainee entity tracking push-up phases and stamina.
 public class Gymer {
 	private static final int MAX_HP = 10;
 

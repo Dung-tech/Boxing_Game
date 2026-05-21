@@ -7,6 +7,7 @@ import entity.Fighter;
 import system.RoundSystem;
 import util.Constants;
 
+// HUD renderer for health, mana, and round info.
 public class GameHUD {
     private HealthBar hpBar;
     private ManaBar manaBar;

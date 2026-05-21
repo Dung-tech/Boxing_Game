@@ -12,6 +12,7 @@ import main.Main;
 import system.RoundSystem;
 import util.Constants;
 
+// Game over results screen with restart/menu options.
 public class GameOverScreen extends ScreenAdapter {
 
     private final Game game;

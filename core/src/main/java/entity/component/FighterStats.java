@@ -3,6 +3,7 @@ package entity.component;
 import util.Constants;
 import util.Constants.Action;
 
+// Lightweight stats and timer for action-triggered effects.
 public class FighterStats {
     public int hp = Constants.MAX_HP;
     public float mana = 0;

@@ -3,6 +3,7 @@ package system;
 import util.Constants;
 import entity.Fighter;
 
+// Round timer, win tracking, and end-of-round transitions.
 public class RoundSystem {
     public enum RoundResult {
         P1,
