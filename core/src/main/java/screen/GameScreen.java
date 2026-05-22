@@ -109,6 +109,19 @@ public class GameScreen extends ScreenAdapter {
 
             p1.update(delta);
             p2.update(delta);
+
+            // Chặn không cho 2 võ sĩ đi xuyên qua nhau (P1 bên trái, P2 bên phải)
+            float minDistance = 150f; // Khoảng cách tối thiểu giữa 2 võ sĩ
+            if (p1.getX() + minDistance > p2.getX()) {
+                float midpoint = (p1.getX() + p2.getX()) / 2.0f;
+                p1.setX(midpoint - minDistance / 2.0f);
+                p2.setX(midpoint + minDistance / 2.0f);
+            }
+
+            // Đảm bảo giới hạn biên màn hình lại một lần nữa
+            if (p1.getX() < 0) p1.setX(0);
+            if (p2.getX() > Constants.APP_WIDTH - p2.getWidth()) p2.setX(Constants.APP_WIDTH - p2.getWidth());
+
             combatSystem.update(p1, p2);
         }
         if (!gameplayBlocked) {
@@ -354,19 +367,33 @@ public class GameScreen extends ScreenAdapter {
         }
         game.soundManager.playMusic();
         KeyboardInput p1Input = new KeyboardInput(
-            com.badlogic.gdx.Input.Keys.D,
-            com.badlogic.gdx.Input.Keys.A,
-            com.badlogic.gdx.Input.Keys.S,
-            com.badlogic.gdx.Input.Keys.W,
-            com.badlogic.gdx.Input.Keys.SPACE
+            com.badlogic.gdx.Input.Keys.H,      // Đấm: H
+            -1,                                 // Đấm phụ
+            com.badlogic.gdx.Input.Keys.J,      // Đá: J
+            -1,                                 // Đá phụ
+            com.badlogic.gdx.Input.Keys.S,      // Cúi: S (phím xuống trong cụm WASD)
+            -1,                                 // Cúi phụ
+            com.badlogic.gdx.Input.Keys.W,      // Đỡ: W (phím lên trong cụm WASD)
+            -1,                                 // Đỡ phụ
+            com.badlogic.gdx.Input.Keys.K,      // Tuyệt chiêu: K
+            com.badlogic.gdx.Input.Keys.L,      // Tuyệt chiêu phụ: L
+            com.badlogic.gdx.Input.Keys.A,      // Di chuyển trái: A
+            com.badlogic.gdx.Input.Keys.D       // Di chuyển phải: D
         );
         p1Controller = new P1Controller(p1, p1Input);
         KeyboardInput p2Input = new KeyboardInput(
-            com.badlogic.gdx.Input.Keys.RIGHT,
-            com.badlogic.gdx.Input.Keys.LEFT,
-            com.badlogic.gdx.Input.Keys.DOWN,
-            com.badlogic.gdx.Input.Keys.UP,
-            com.badlogic.gdx.Input.Keys.ENTER
+            com.badlogic.gdx.Input.Keys.NUMPAD_1, // Đấm chính: Numpad 1
+            com.badlogic.gdx.Input.Keys.NUM_1,    // Đấm phụ: Phím số 1
+            com.badlogic.gdx.Input.Keys.NUMPAD_2, // Đá chính: Numpad 2
+            com.badlogic.gdx.Input.Keys.NUM_2,    // Đá phụ: Phím số 2
+            com.badlogic.gdx.Input.Keys.DOWN,     // Cúi chính: Phím mũi tên Xuống
+            com.badlogic.gdx.Input.Keys.NUM_3,    // Cúi phụ: Phím số 3
+            com.badlogic.gdx.Input.Keys.UP,       // Đỡ chính: Phím mũi tên Lên
+            com.badlogic.gdx.Input.Keys.NUM_4,    // Đỡ phụ: Phím số 4
+            com.badlogic.gdx.Input.Keys.NUMPAD_5, // Tuyệt chiêu chính: Numpad 5
+            com.badlogic.gdx.Input.Keys.NUM_5,    // Tuyệt chiêu phụ: Phím số 5
+            com.badlogic.gdx.Input.Keys.LEFT,     // Di chuyển trái: Phím mũi tên Trái
+            com.badlogic.gdx.Input.Keys.RIGHT     // Di chuyển phải: Phím mũi tên Phải
         );
         p2Controller = new P2Controller(p2, p2Input);
         startCountdown();
