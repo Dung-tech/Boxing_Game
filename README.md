@@ -166,4 +166,4 @@ Boxing_Game/
 
 ## 📄 License
 
-Bài tập lớn môn Lập trình Hướng đối tượng — HUST 2025.
+Bài tập lớn môn Lập trình Hướng đối tượng — HUST 2026.
