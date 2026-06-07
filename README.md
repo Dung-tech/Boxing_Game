@@ -9,7 +9,7 @@ Bài tập lớn môn **Lập trình Hướng đối tượng** — Đại học
 
 ## 📥 Download & Chạy nhanh
 
-1. Tải file **`stage.zip`** từ **`Releases`**(
+1. Tải file **`stage.zip`** từ **`Releases`**
 2. **Giải nén** toàn bộ file `stage.zip` ra một thư mục (ví dụ: `D:\BoxingGame\`)
 3. Mở thư mục vừa giải nén, tìm và chạy file **`BoxingGame.exe`**
 > ⚠️ **Lưu ý:** Phải giải nén toàn bộ trước khi chạy. Không mở trực tiếp file `.exe` từ bên trong file `.zip` vì sẽ thiếu tài nguyên (ảnh, âm thanh, font) và game sẽ lỗi.
