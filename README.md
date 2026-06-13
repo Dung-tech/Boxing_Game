@@ -7,13 +7,13 @@
 
 Bài tập lớn môn **Lập trình Hướng đối tượng** — Đại học Bách khoa Hà Nội (HUST)
 
-## 📥 Download & Chạy nhanh
+## 📥 Hướng dẫn tải & Chạy nhanh
 
-1. Tải file **`stage.zip`** từ **`Releases`**
-2. **Giải nén** toàn bộ file `stage.zip` ra một thư mục (ví dụ: `D:\BoxingGame\`)
-3. Mở thư mục vừa giải nén, tìm và chạy file **`BoxingGame.exe`**
-> ⚠️ **Lưu ý:** Phải giải nén toàn bộ trước khi chạy. Không mở trực tiếp file `.exe` từ bên trong file `.zip` vì sẽ thiếu tài nguyên (ảnh, âm thanh, font) và game sẽ lỗi.
+1. Tải file **`stage.zip`** từ **[Releases (v1.0.1)](https://github.com/Dung-tech/Boxing_Game/releases/tag/1.0.1)**.
+2. **Giải nén** toàn bộ file `stage.zip` ra một thư mục bất kỳ (ví dụ: `D:\BoxingGame\`).
+3. Mở thư mục vừa giải nén, tìm và chạy file **`BoxingGame.exe`**.
 
+> ⚠️ **Lưu ý quan trọng:** Bạn bắt buộc phải **giải nén** toàn bộ thư mục trước khi chơi. Tuyệt đối không mở trực tiếp file `.exe` từ bên trong file `.zip` (trên WinRAR/7-Zip), nếu không game sẽ bị lỗi do không load được tài nguyên (âm thanh, hình ảnh, font chữ).
 ## ✨ Tính năng
 
 - **Đối kháng 1v1:** Ronaldo (P1) vs Messi (P2) — đấm, đá, đỡ, né, tuyệt chiêu
