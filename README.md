@@ -8,6 +8,13 @@
 Bài tập lớn môn **Lập trình Hướng đối tượng** — Đại học Bách khoa Hà Nội (HUST)
 
 ## 📥 Hướng dẫn tải & Chạy nhanh
+**Android mobile download**
+
+Tải file **`android_release.apk`** từ **[Releases (v1.0.0)](https://github.com/Dung-tech/Boxing_Game/releases/tag/1.0.0)**.
+
+
+
+**Desktop download**
 
 1. Tải file **`stage.zip`** từ **[Releases (v1.0.1)](https://github.com/Dung-tech/Boxing_Game/releases/tag/1.0.1)**.
 2. **Giải nén** toàn bộ file `stage.zip` ra một thư mục bất kỳ (ví dụ: `D:\BoxingGame\`).
